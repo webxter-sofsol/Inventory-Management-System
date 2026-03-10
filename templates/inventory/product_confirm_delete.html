@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Product - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h2 class="mb-0">Confirm Deletion</h2>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Warning:</strong> This action cannot be undone.
+                </div>
+                
+                <p>Are you sure you want to delete the following product?</p>
+                
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ object.name }}</h5>
+                        <ul class="list-unstyled mb-0">
+                            <li><strong>Category:</strong> {{ object.category.name }}</li>
+                            <li><strong>Quantity:</strong> {{ object.quantity }}</li>
+                            <li><strong>Price:</strong> ${{ object.price }}</li>
+                            <li><strong>Total Value:</strong> ${{ object.total_value }}</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'product_list_view' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Delete Product</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

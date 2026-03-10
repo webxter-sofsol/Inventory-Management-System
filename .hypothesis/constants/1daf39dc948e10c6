@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\config\settings.py
+# hypothesis_version: 6.151.9
+
+['127.0.0.1', 'APP_DIRS', 'BACKEND', 'DIRS', 'ENGINE', 'INFO', 'NAME', 'OPTIONS', 'UTC', 'accounts', 'accounts.CustomUser', 'class', 'config.urls', 'console', 'context_processors', 'dashboard', 'db.sqlite3', 'default', 'django.contrib.admin', 'django.contrib.auth', 'django.log', 'en-us', 'file', 'filename', 'handlers', 'inventory', 'level', 'localhost', 'logging.FileHandler', 'login', 'rest_framework', 'root', 'static', 'static/', 'staticfiles', 'templates', 'testserver', 'version']

@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\inventory\forms.py
+# hypothesis_version: 6.151.9
+
+[',', '0', '0.01', '1', 'Enter category name', 'Enter new value', 'Enter price', 'Enter product name', 'Enter quantity', 'New Value', 'Operation Type', 'Price is required.', 'Product IDs', 'Update Prices', 'Update Quantities', 'Value is required.', 'alert_threshold', 'category', 'class', 'description', 'form-control', 'min', 'name', 'operation', 'placeholder', 'price', 'product', 'product_ids', 'quantity', 'quantity_change', 'rows', 'sale', 'step', 'transaction_type', 'value']

@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\inventory\urls.py
+# hypothesis_version: 6.151.9
+
+['bulk_update', 'bulk_update_submit', 'categories/', 'categories/create/', 'category_create', 'category_delete', 'category_list', 'category_update', 'dashboard', 'product_create', 'product_delete', 'product_list_view', 'product_update', 'products/', 'products/create/', 'reports', 'reports/', 'transaction_create', 'transaction_history', 'transactions/', 'transactions/create/', 'validate_stock']

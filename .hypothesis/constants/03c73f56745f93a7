@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\inventory\models.py
+# hypothesis_version: 6.151.9
+
+[100, 200, '-timestamp', '0.01', 'Purchase', 'Sale', 'ai_interaction_logs', 'alert', 'categories', 'category', 'created_at', 'in-stock', 'is_active', 'low-stock', 'low_stock_alerts', 'name', 'out-of-stock', 'product', 'products', 'purchase', 'quantity', 'sale', 'stock_transactions', 'transaction_type', 'transactions']

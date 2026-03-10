@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Transaction History - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Transaction History</h1>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'transaction_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Record Transaction
+        </a>
+    </div>
+</div>
+
+<!-- Filter Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" id="filter-form">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="product" class="form-label">Product</label>
+                    <select class="form-select" id="product" name="product">
+                        <option value="">All Products</option>
+                        {% for prod in products %}
+                        <option value="{{ prod.id }}" {% if product_filter == prod.id|stringformat:"s" %}selected{% endif %}>
+                            {{ prod.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="transaction_type" class="form-label">Type</label>
+                    <select class="form-select" id="transaction_type" name="transaction_type">
+                        <option value="">All Types</option>
+                        <option value="purchase" {% if transaction_type_filter == 'purchase' %}selected{% endif %}>Purchase</option>
+                        <option value="sale" {% if transaction_type_filter == 'sale' %}selected{% endif %}>Sale</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" 
+                           value="{{ start_date_filter }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" 
+                           value="{{ end_date_filter }}">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Transaction Table -->
+{% if transactions %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Type</th>
+                        <th>Quantity Change</th>
+                        <th>User</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr>
+                        <td>{{ transaction.timestamp|date:"Y-m-d H:i:s" }}</td>
+                        <td>{{ transaction.product.name }}</td>
+                        <td>{{ transaction.product.category.name }}</td>
+                        <td>
+                            {% if transaction.transaction_type == 'purchase' %}
+                            <span class="badge bg-success">Purchase</span>
+                            {% else %}
+                            <span class="badge bg-info">Sale</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if transaction.quantity_change > 0 %}
+                            <span class="text-success">+{{ transaction.quantity_change }}</span>
+                            {% else %}
+                            <span class="text-danger">{{ transaction.quantity_change }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if transaction.user %}
+                            {{ transaction.user.email }}
+                            {% else %}
+                            <span class="text-muted">System</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Transaction pagination" class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if product_filter %}&product={{ product_filter }}{% endif %}{% if transaction_type_filter %}&transaction_type={{ transaction_type_filter }}{% endif %}{% if start_date_filter %}&start_date={{ start_date_filter }}{% endif %}{% if end_date_filter %}&end_date={{ end_date_filter }}{% endif %}">First</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if product_filter %}&product={{ product_filter }}{% endif %}{% if transaction_type_filter %}&transaction_type={{ transaction_type_filter }}{% endif %}{% if start_date_filter %}&start_date={{ start_date_filter }}{% endif %}{% if end_date_filter %}&end_date={{ end_date_filter }}{% endif %}">Previous</a>
+        </li>
+        {% endif %}
+        
+        <li class="page-item active">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if product_filter %}&product={{ product_filter }}{% endif %}{% if transaction_type_filter %}&transaction_type={{ transaction_type_filter }}{% endif %}{% if start_date_filter %}&start_date={{ start_date_filter }}{% endif %}{% if end_date_filter %}&end_date={{ end_date_filter }}{% endif %}">Next</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if product_filter %}&product={{ product_filter }}{% endif %}{% if transaction_type_filter %}&transaction_type={{ transaction_type_filter }}{% endif %}{% if start_date_filter %}&start_date={{ start_date_filter }}{% endif %}{% if end_date_filter %}&end_date={{ end_date_filter }}{% endif %}">Last</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info">
+    <p class="mb-0">No transactions found matching your criteria.</p>
+    <p class="mb-0 mt-2">
+        <a href="{% url 'transaction_create' %}" class="alert-link">Record your first transaction</a>
+    </p>
+</div>
+{% endif %}
+
+{% endblock %}

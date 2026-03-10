@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\inventory\admin.py
+# hypothesis_version: 6.151.9
+
+['category', 'created_at', 'description', 'is_active', 'name', 'price', 'product', 'product__name', 'quantity', 'quantity_change', 'service_name', 'stock_status', 'timestamp', 'transaction_type', 'updated_at', 'user']

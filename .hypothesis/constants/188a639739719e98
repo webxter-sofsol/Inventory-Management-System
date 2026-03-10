@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\accounts\migrations\0001_initial.py
+# hypothesis_version: 6.151.9
+
+[128, 150, 254, 'CustomUser', 'ID', 'active', 'auth', 'auth.group', 'auth.permission', 'date joined', 'date_joined', 'db_table', 'email', 'first name', 'first_name', 'groups', 'id', 'indexes', 'is_active', 'is_staff', 'is_superuser', 'last login', 'last name', 'last_login', 'last_name', 'password', 'staff status', 'superuser status', 'user', 'user permissions', 'user_permissions', 'user_set', 'users']

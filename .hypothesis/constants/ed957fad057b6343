@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\inventory\migrations\0002_stocktransaction.py
+# hypothesis_version: 6.151.9
+
+['-timestamp', '0001_initial', 'ID', 'Purchase', 'Sale', 'StockTransaction', 'db_table', 'id', 'indexes', 'inventory', 'inventory.product', 'ordering', 'product', 'purchase', 'quantity_change', 'sale', 'stock_transactions', 'timestamp', 'transaction_type', 'transactions', 'user']

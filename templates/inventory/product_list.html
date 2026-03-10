@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Products - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Products</h1>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'product_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add Product
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filter Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" id="filter-form" hx-get="{% url 'product_list_view' %}" hx-target="#product-table-container" hx-trigger="submit, change from:select">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           placeholder="Search by name..." value="{{ search_query }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="category" class="form-label">Category</label>
+                    <select class="form-select" id="category" name="category">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.name }}" {% if category_filter == cat.name %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="stock_status" class="form-label">Stock Status</label>
+                    <select class="form-select" id="stock_status" name="stock_status">
+                        <option value="">All Status</option>
+                        <option value="in-stock" {% if stock_status_filter == 'in-stock' %}selected{% endif %}>In Stock</option>
+                        <option value="low-stock" {% if stock_status_filter == 'low-stock' %}selected{% endif %}>Low Stock</option>
+                        <option value="out-of-stock" {% if stock_status_filter == 'out-of-stock' %}selected{% endif %}>Out of Stock</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bulk Actions -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="post" action="{% url 'bulk_update' %}" id="bulk-form">
+            {% csrf_token %}
+            <div class="row g-3 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label">Bulk Actions:</label>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" name="operation" value="quantity" class="btn btn-outline-primary btn-sm" 
+                            onclick="return validateSelection()">
+                        Update Quantities
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" name="operation" value="price" class="btn btn-outline-primary btn-sm"
+                            onclick="return validateSelection()">
+                        Update Prices
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <small class="text-muted">Select products below to perform bulk actions</small>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Product Table Container -->
+<div id="product-table-container">
+    {% if products %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="select-all" class="form-check-input">
+                            </th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Total Value</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="product_ids" value="{{ product.id }}" 
+                                       class="form-check-input product-checkbox" form="bulk-form">
+                            </td>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.category.name }}</td>
+                            <td>{{ product.quantity }}</td>
+                            <td>${{ product.price }}</td>
+                            <td>${{ product.total_value }}</td>
+                            <td>
+                                {% if product.stock_status == 'in-stock' %}
+                                <span class="badge bg-success">In Stock</span>
+                                {% elif product.stock_status == 'low-stock' %}
+                                <span class="badge bg-warning text-dark">Low Stock</span>
+                                {% elif product.stock_status == 'out-of-stock' %}
+                                <span class="badge bg-danger">Out of Stock</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'product_update' product.id %}" class="btn btn-outline-primary">Edit</a>
+                                    <a href="{% url 'product_delete' product.id %}" class="btn btn-outline-danger">Delete</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Product pagination" class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if stock_status_filter %}&stock_status={{ stock_status_filter }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if stock_status_filter %}&stock_status={{ stock_status_filter }}{% endif %}">Previous</a>
+            </li>
+            {% endif %}
+            
+            <li class="page-item active">
+                <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if stock_status_filter %}&stock_status={{ stock_status_filter }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if stock_status_filter %}&stock_status={{ stock_status_filter }}{% endif %}">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info">
+        <p class="mb-0">No products found matching your criteria.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Select all checkbox functionality
+document.getElementById('select-all')?.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.product-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+
+// Validate at least one product is selected
+function validateSelection() {
+    const checkboxes = document.querySelectorAll('.product-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('Please select at least one product.');
+        return false;
+    }
+    return true;
+}
+</script>
+{% endblock %}

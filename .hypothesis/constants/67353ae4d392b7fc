@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\inventory\migrations\0001_initial.py
+# hypothesis_version: 6.151.9
+
+[100, 200, '0.01', 'Category', 'ID', 'Product', 'alert_threshold', 'categories', 'category', 'created_at', 'db_table', 'description', 'id', 'indexes', 'inventory.category', 'name', 'price', 'products', 'quantity', 'updated_at', 'verbose_name_plural']

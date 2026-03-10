@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Category - Inventory Management{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3><i class="bi bi-exclamation-triangle"></i> Confirm Deletion</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <p class="lead">Are you sure you want to delete the category:</p>
+                    <p class="text-center">
+                        <strong class="fs-4">{{ object.name }}</strong>
+                    </p>
+
+                    {% if object.products.count > 0 %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-circle"></i>
+                            <strong>Warning:</strong> This category has {{ object.products.count }} product(s) associated with it.
+                            Deleting this category may fail if products are still using it.
+                        </div>
+                    {% endif %}
+
+                    <p class="text-muted">This action cannot be undone.</p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'category_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete Category
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

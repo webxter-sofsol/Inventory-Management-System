@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\accounts\urls.py
+# hypothesis_version: 6.151.9
+
+['login', 'login/', 'logout', 'logout/', 'register', 'register/']

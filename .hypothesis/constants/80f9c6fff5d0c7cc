@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\inventory\migrations\0003_aiinteractionlog_lowstockalert.py
+# hypothesis_version: 6.151.9
+
+[100, '-timestamp', 'AIInteractionLog', 'ID', 'LowStockAlert', 'ai_interaction_logs', 'alert', 'created_at', 'db_table', 'id', 'indexes', 'inventory', 'inventory.product', 'is_active', 'low_stock_alerts', 'ordering', 'product', 'request_data', 'response_data', 'service_name', 'timestamp']

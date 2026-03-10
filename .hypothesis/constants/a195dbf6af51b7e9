@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\inventory\views.py
+# hypothesis_version: 6.151.9
+
+['%Y-%m-%d', 'Add New Category', 'Add New Product', 'Create Category', 'Create Product', 'Enter category name', 'Invalid quantity', 'Missing parameters', 'POST', 'Product not found', 'Record Transaction', 'Update Category', 'Update Product', '_', 'categories', 'category', 'category_filter', 'category_list', 'class', 'current_stock', 'description', 'end_date', 'end_date_filter', 'form-control', 'form_title', 'id', 'message', 'name', 'operation', 'placeholder', 'price', 'product', 'product_', 'product__category', 'product_filter', 'product_id', 'product_ids', 'product_list_view', 'products', 'purchase', 'quantity', 'quantity_change', 'rows', 'sale', 'search', 'search_query', 'start_date', 'start_date_filter', 'stock_status', 'stock_status_filter', 'submit_text', 'transaction_history', 'transaction_type', 'transactions', 'user', 'valid']

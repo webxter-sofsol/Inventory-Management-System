@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\accounts\views.py
+# hypothesis_version: 6.151.9
+
+['GET', 'POST', 'accounts/login.html', 'dashboard', 'form', 'login', 'next', 'password', 'username']

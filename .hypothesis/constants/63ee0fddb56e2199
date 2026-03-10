@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\config\urls.py
+# hypothesis_version: 6.151.9
+
+['accounts.urls', 'accounts/', 'admin/', 'api/', 'inventory.api_urls', 'inventory.urls']

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Bulk Update - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">
+                    Bulk Update - 
+                    {% if operation == 'quantity' %}
+                    Update Quantities
+                    {% elif operation == 'price' %}
+                    Update Prices
+                    {% endif %}
+                </h2>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'bulk_update_submit' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="operation" value="{{ operation }}">
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>Category</th>
+                                    <th>Current Value</th>
+                                    <th>New Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr>
+                                    <td>{{ product.name }}</td>
+                                    <td>{{ product.category.name }}</td>
+                                    <td>
+                                        {% if operation == 'quantity' %}
+                                        {{ product.quantity }}
+                                        {% elif operation == 'price' %}
+                                        ${{ product.price }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if operation == 'quantity' %}
+                                        <input type="number" 
+                                               name="product_{{ product.id }}" 
+                                               class="form-control" 
+                                               value="{{ product.quantity }}"
+                                               min="0"
+                                               required>
+                                        {% elif operation == 'price' %}
+                                        <input type="number" 
+                                               name="product_{{ product.id }}" 
+                                               class="form-control" 
+                                               value="{{ product.price }}"
+                                               step="0.01"
+                                               min="0.01"
+                                               required>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'product_list_view' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Apply Updates</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

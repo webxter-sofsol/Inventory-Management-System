@@ -1,0 +1,4 @@
+# file: D:\Projects\InventoryManagement\inventory\services.py
+# hypothesis_version: 6.151.9
+
+['alert_threshold', 'id', 'in-stock', 'low-stock', 'out-of-stock', 'price', 'purchase', 'quantity', 'sale']

@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ form_title }} - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">{{ form_title }}</h2>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate id="transaction-form">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.product.id_for_label }}" class="form-label">
+                            Product <span class="text-danger">*</span>
+                        </label>
+                        {{ form.product }}
+                        {% if form.product.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.product.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.transaction_type.id_for_label }}" class="form-label">
+                            Transaction Type <span class="text-danger">*</span>
+                        </label>
+                        {{ form.transaction_type }}
+                        {% if form.transaction_type.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.transaction_type.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.quantity_change.id_for_label }}" class="form-label">
+                            Quantity <span class="text-danger">*</span>
+                        </label>
+                        {{ form.quantity_change }}
+                        {% if form.quantity_change.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.quantity_change.errors }}
+                        </div>
+                        {% endif %}
+                        {% if form.quantity_change.help_text %}
+                        <small class="form-text text-muted">{{ form.quantity_change.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Real-time validation feedback -->
+                    <div id="stock-validation" class="mb-3" style="display: none;">
+                        <div class="alert" role="alert" id="validation-message"></div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'transaction_history' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary" id="submit-btn">{{ submit_text }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Real-time stock validation with HTMX-like behavior
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('transaction-form');
+    const productSelect = document.getElementById('{{ form.product.id_for_label }}');
+    const transactionTypeSelect = document.getElementById('{{ form.transaction_type.id_for_label }}');
+    const quantityInput = document.getElementById('{{ form.quantity_change.id_for_label }}');
+    const validationDiv = document.getElementById('stock-validation');
+    const validationMessage = document.getElementById('validation-message');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    function validateStock() {
+        const productId = productSelect.value;
+        const transactionType = transactionTypeSelect.value;
+        const quantity = quantityInput.value;
+        
+        if (!productId || !transactionType || !quantity) {
+            validationDiv.style.display = 'none';
+            return;
+        }
+        
+        // Make AJAX request to validate stock
+        fetch(`{% url 'validate_stock' %}?product_id=${productId}&quantity=${quantity}&transaction_type=${transactionType}`)
+            .then(response => response.json())
+            .then(data => {
+                validationDiv.style.display = 'block';
+                validationMessage.textContent = data.message;
+                
+                if (data.valid) {
+                    validationMessage.className = 'alert alert-success';
+                    submitBtn.disabled = false;
+                } else {
+                    validationMessage.className = 'alert alert-danger';
+                    submitBtn.disabled = true;
+                }
+            })
+            .catch(error => {
+                console.error('Validation error:', error);
+                validationDiv.style.display = 'none';
+                submitBtn.disabled = false;
+            });
+    }
+    
+    // Add event listeners for real-time validation
+    productSelect.addEventListener('change', validateStock);
+    transactionTypeSelect.addEventListener('change', validateStock);
+    quantityInput.addEventListener('input', debounce(validateStock, 500));
+    
+    // Debounce function to avoid too many requests
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+});
+</script>
+{% endblock %}
