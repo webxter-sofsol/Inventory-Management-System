@@ -1,24 +1,140 @@
 {% extends 'base.html' %}
+{% block title %}Sign Out - Inventory Management System{% endblock %}
 
-{% block title %}Logout - Inventory Management System{% endblock %}
+{% block extra_css %}
+<style>
+  .confirm-wrap {
+    max-width: 420px;
+    margin: 60px auto;
+  }
+
+  .confirm-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,.07);
+    text-align: center;
+  }
+
+  .confirm-header {
+    padding: 36px 32px 20px;
+  }
+
+  .confirm-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    border: 6px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+    font-size: 26px;
+    color: #374151;
+  }
+
+  .confirm-title    { font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 8px; }
+  .confirm-subtitle { font-size: 13.5px; color: #6b7280; margin: 0; line-height: 1.5; }
+
+  .user-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 99px;
+    padding: 6px 14px 6px 6px;
+    margin: 16px 0 0;
+  }
+
+  .user-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .user-email { font-size: 13px; font-weight: 500; color: #374151; }
+
+  .confirm-footer {
+    padding: 20px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-signout {
+    height: 44px;
+    border-radius: 10px;
+    border: none;
+    background: #111827;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background .15s;
+    width: 100%;
+  }
+  .btn-signout:hover { background: #1f2937; }
+
+  .btn-stay {
+    height: 44px;
+    border-radius: 10px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all .15s;
+  }
+  .btn-stay:hover { background: #f3f4f6; color: #111827; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="card shadow">
-            <div class="card-body p-5 text-center">
-                <h2 class="card-title mb-4">Logout</h2>
-                <p class="mb-4">Are you sure you want to logout?</p>
-                
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-danger btn-lg">Yes, Logout</button>
-                        <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-lg">Cancel</a>
-                    </div>
-                </form>
-            </div>
-        </div>
+<div class="confirm-wrap">
+  <div class="confirm-card">
+
+    <div class="confirm-header">
+      <div class="confirm-icon-wrap">
+        <i class="bi bi-box-arrow-right"></i>
+      </div>
+      <h2 class="confirm-title">Sign out?</h2>
+      <p class="confirm-subtitle">You'll need to sign in again to access your inventory.</p>
+      {% if user.is_authenticated %}
+      <div class="user-chip">
+        <div class="user-avatar">{{ user.email|first|upper }}</div>
+        <span class="user-email">{{ user.email }}</span>
+      </div>
+      {% endif %}
     </div>
+
+    <div class="confirm-footer">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn-signout">
+          <i class="bi bi-box-arrow-right"></i> Yes, sign me out
+        </button>
+      </form>
+      <a href="{% url 'dashboard' %}" class="btn-stay">
+        <i class="bi bi-arrow-left"></i> Stay signed in
+      </a>
+    </div>
+
+  </div>
 </div>
 {% endblock %}

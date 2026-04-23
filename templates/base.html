@@ -4,96 +4,595 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>{% block title %}Inventory Management System{% endblock %}</title>
-    
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    
+
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #f4f6fb; }
+
+        /* ── Navbar ── */
+        .app-navbar {
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 1px 3px rgba(0,0,0,.06);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            flex-shrink: 0;
+            margin-right: 32px;
+        }
+
+        .nav-brand .brand-icon {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 16px;
+        }
+
+        .nav-brand .brand-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: -0.3px;
+        }
+
+        /* Nav links */
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex: 1;
+        }
+
+        .nav-link-item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #6b7280;
+            text-decoration: none;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+
+        .nav-link-item i { font-size: 15px; }
+
+        .nav-link-item:hover {
+            color: #111827;
+            background: #f3f4f6;
+        }
+
+        .nav-link-item.active {
+            color: #1d4ed8;
+            background: #eff6ff;
+            font-weight: 600;
+        }
+
+        /* Right side */
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .nav-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #1d4ed8;
+            color: #fff;
+            text-decoration: none;
+            border: none;
+            transition: background .15s;
+        }
+
+        .nav-action-btn:hover { background: #1648c0; color: #fff; }
+
+        /* User menu */
+        .user-menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 10px 5px 5px;
+            border-radius: 8px;
+            border: 1.5px solid #e5e7eb;
+            background: #fff;
+            cursor: pointer;
+            transition: all .15s;
+            text-decoration: none;
+        }
+
+        .user-menu-btn:hover { border-color: #d1d5db; background: #f9fafb; }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .user-email {
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #374151;
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .user-chevron { color: #9ca3af; font-size: 12px; }
+
+        /* Dropdown */
+        .user-dropdown {
+            min-width: 200px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.1);
+            padding: 6px;
+            margin-top: 6px !important;
+        }
+
+        .user-dropdown .dropdown-item {
+            border-radius: 6px;
+            font-size: 13px;
+            padding: 8px 12px;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-dropdown .dropdown-item:hover { background: #f3f4f6; color: #111827; }
+        .user-dropdown .dropdown-item.text-danger:hover { background: #fef2f2; color: #dc2626; }
+        .user-dropdown .dropdown-divider { margin: 4px 0; border-color: #f3f4f6; }
+
+        /* Mobile hamburger */
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            padding: 6px;
+            border-radius: 6px;
+            color: #6b7280;
+            font-size: 20px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+        .mobile-toggle:hover { background: #f3f4f6; color: #111827; }
+
+        /* Mobile drawer */
+        .mobile-nav {
+            display: none;
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 16px;
+        }
+
+        .mobile-nav.open { display: block; }
+
+        .mobile-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            text-decoration: none;
+            margin-bottom: 2px;
+        }
+
+        .mobile-nav-link:hover { background: #f3f4f6; color: #111827; }
+        .mobile-nav-link.active { background: #eff6ff; color: #1d4ed8; }
+
+        .mobile-divider { border-top: 1px solid #f3f4f6; margin: 8px 0; }
+
+        @media (max-width: 991px) {
+            .nav-links { display: none; }
+            .mobile-toggle { display: flex; align-items: center; }
+            .nav-action-btn span { display: none; }
+            .nav-action-btn { padding: 7px 10px; }
+        }
+
+        /* ── Messages ── */
+        .messages-bar { padding: 12px 24px 0; }
+        .messages-bar .alert {
+            border-radius: 10px;
+            font-size: 13.5px;
+            border: none;
+            padding: 10px 16px;
+        }
+
+        /* ── Main ── */
+        .app-main { padding: 28px 24px; max-width: 1400px; margin: 0 auto; }
+
+        /* ── Footer ── */
+        .app-footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #9ca3af;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 40px;
+            background: #fff;
+        }
+    </style>
+
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'dashboard' %}">Inventory System</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'product_list_view' %}">Products</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'category_list' %}">Categories</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'transaction_history' %}">Transactions</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'reports' %}">Reports</a>
-                    </li>
-                    {% endif %}
-                </ul>
-                <ul class="navbar-nav">
-                    {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <span class="navbar-text me-3">{{ user.email }}</span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
-                    </li>
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'login' %}">Login</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'register' %}">Register</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav>
 
-    <!-- Messages -->
-    {% if messages %}
-    <div class="container mt-3">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <!-- ── Navbar ── -->
+    <header>
+        <nav class="app-navbar">
+            <!-- Brand -->
+            <a class="nav-brand" href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}{% endif %}">
+                <div class="brand-icon"><i class="bi bi-box-seam"></i></div>
+                <span class="brand-name">Inventory</span>
+            </a>
+
+            <!-- Desktop nav links -->
+            {% if user.is_authenticated %}
+            <div class="nav-links">
+                <a href="{% url 'dashboard' %}"
+                   class="nav-link-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="{% url 'product_list_view' %}"
+                   class="nav-link-item {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-box-seam"></i> Products
+                </a>
+                <a href="{% url 'category_list' %}"
+                   class="nav-link-item {% if 'category' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-tag"></i> Categories
+                </a>
+                <a href="{% url 'transaction_history' %}"
+                   class="nav-link-item {% if 'transaction' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-arrow-left-right"></i> Transactions
+                </a>
+                <a href="{% url 'reports' %}"
+                   class="nav-link-item {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                    <i class="bi bi-bar-chart"></i> Reports
+                </a>
+                <a href="{% url 'ai_insights' %}"
+                   class="nav-link-item {% if 'ai' in request.resolver_match.url_name or request.resolver_match.url_name == 'pnl' %}active{% endif %}">
+                    <i class="bi bi-stars"></i> AI Insights
+                </a>
+                <a href="{% url 'pnl' %}"
+                   class="nav-link-item {% if request.resolver_match.url_name == 'pnl' %}active{% endif %}">
+                    <i class="bi bi-graph-up-arrow"></i> P&amp;L
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Right side -->
+            <div class="nav-right">
+                {% if user.is_authenticated %}
+                <!-- Quick add button -->
+                <a href="{% url 'transaction_create' %}" class="nav-action-btn">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>New Transaction</span>
+                </a>
+
+                <!-- User dropdown -->
+                <div class="dropdown">
+                    <a class="user-menu-btn" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="user-avatar">{{ user.email|first|upper }}</div>
+                        <span class="user-email">{{ user.email }}</span>
+                        <i class="bi bi-chevron-down user-chevron"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end user-dropdown">
+                        <li>
+                            <span class="dropdown-item-text" style="font-size:11px;color:#9ca3af;padding:6px 12px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">
+                                Signed in as
+                            </span>
+                        </li>
+                        <li>
+                            <span class="dropdown-item-text" style="font-size:13px;font-weight:500;color:#111827;padding:2px 12px 8px;">
+                                {{ user.email }}
+                            </span>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'dashboard' %}">
+                                <i class="bi bi-speedometer2 text-muted"></i> Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'product_create' %}">
+                                <i class="bi bi-plus-circle text-muted"></i> Add Product
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                                <i class="bi bi-box-arrow-right"></i> Sign out
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                {% else %}
+                <a href="{% url 'login' %}" class="nav-link-item">Sign in</a>
+                <a href="{% url 'register' %}" class="nav-action-btn">
+                    <i class="bi bi-person-plus"></i>
+                    <span>Register</span>
+                </a>
+                {% endif %}
+
+                <!-- Mobile toggle -->
+                {% if user.is_authenticated %}
+                <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle menu">
+                    <i class="bi bi-list"></i>
+                </button>
+                {% endif %}
+            </div>
+        </nav>
+
+        <!-- Mobile nav drawer -->
+        {% if user.is_authenticated %}
+        <div class="mobile-nav" id="mobileNav">
+            <a href="{% url 'dashboard' %}" class="mobile-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a href="{% url 'product_list_view' %}" class="mobile-nav-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-box-seam"></i> Products
+            </a>
+            <a href="{% url 'category_list' %}" class="mobile-nav-link {% if 'category' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-tag"></i> Categories
+            </a>
+            <a href="{% url 'transaction_history' %}" class="mobile-nav-link {% if 'transaction' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-arrow-left-right"></i> Transactions
+            </a>
+            <a href="{% url 'reports' %}" class="mobile-nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                <i class="bi bi-bar-chart"></i> Reports
+            </a>
+            <a href="{% url 'ai_insights' %}" class="mobile-nav-link {% if 'ai' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-stars"></i> AI Insights
+            </a>
+            <a href="{% url 'pnl' %}" class="mobile-nav-link {% if request.resolver_match.url_name == 'pnl' %}active{% endif %}">
+                <i class="bi bi-graph-up-arrow"></i> P&amp;L
+            </a>
+            <div class="mobile-divider"></div>
+            <a href="{% url 'logout' %}" class="mobile-nav-link" style="color:#dc2626;">
+                <i class="bi bi-box-arrow-right"></i> Sign out
+            </a>
         </div>
-        {% endfor %}
+        {% endif %}
+    </header>
+
+    <!-- ── Flash toasts ── -->
+    {% if messages %}
+    <div id="toast-container" aria-live="polite" aria-atomic="true">
+      {% for message in messages %}
+      <div class="app-toast app-toast--{{ message.tags }}" role="alert">
+        <div class="toast-icon">
+          {% if 'success' in message.tags %}<i class="bi bi-check-circle-fill"></i>
+          {% elif 'error' in message.tags or 'danger' in message.tags %}<i class="bi bi-exclamation-circle-fill"></i>
+          {% elif 'warning' in message.tags %}<i class="bi bi-exclamation-triangle-fill"></i>
+          {% else %}<i class="bi bi-info-circle-fill"></i>{% endif %}
+        </div>
+        <div class="toast-body">{{ message }}</div>
+        <button class="toast-close" aria-label="Dismiss">&times;</button>
+        <div class="toast-progress"></div>
+      </div>
+      {% endfor %}
     </div>
     {% endif %}
 
-    <!-- Main Content -->
-    <main class="container my-4">
+    <!-- ── Main content ── -->
+    <main class="app-main">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-light text-center text-muted py-3 mt-5">
-        <div class="container">
-            <p class="mb-0">&copy; 2024 Inventory Management System</p>
-        </div>
+    <!-- ── Footer ── -->
+    <footer class="app-footer">
+        &copy; 2024 Inventory Management System
     </footer>
 
-    <!-- Bootstrap 5 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
-    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
-    
+
+    <script>
+        // Mobile nav toggle
+        const toggle = document.getElementById('mobileToggle');
+        const drawer = document.getElementById('mobileNav');
+        if (toggle && drawer) {
+            toggle.addEventListener('click', () => {
+                drawer.classList.toggle('open');
+                const icon = toggle.querySelector('i');
+                icon.className = drawer.classList.contains('open') ? 'bi bi-x-lg' : 'bi bi-list';
+            });
+        }
+    </script>
+
+    <!-- ── Toast notifications ── -->
+    <style>
+      #toast-container {
+        position: fixed;
+        top: 72px;
+        right: 20px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none;
+        max-width: 360px;
+        width: calc(100vw - 40px);
+      }
+
+      .app-toast {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        box-shadow: 0 8px 24px rgba(0,0,0,.12);
+        pointer-events: all;
+        position: relative;
+        overflow: hidden;
+        animation: toastIn .3s cubic-bezier(.34,1.56,.64,1) both;
+        transition: opacity .3s, transform .3s;
+      }
+
+      .app-toast.hiding {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+
+      @keyframes toastIn {
+        from { opacity: 0; transform: translateX(24px); }
+        to   { opacity: 1; transform: translateX(0); }
+      }
+
+      /* Variants */
+      .app-toast--success {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+      }
+      .app-toast--success .toast-icon { color: #16a34a; }
+      .app-toast--success .toast-progress { background: #22c55e; }
+
+      .app-toast--error,
+      .app-toast--danger {
+        background: #fef2f2;
+        border-color: #fecaca;
+      }
+      .app-toast--error .toast-icon,
+      .app-toast--danger .toast-icon { color: #dc2626; }
+      .app-toast--error .toast-progress,
+      .app-toast--danger .toast-progress { background: #ef4444; }
+
+      .app-toast--warning {
+        background: #fffbeb;
+        border-color: #fde68a;
+      }
+      .app-toast--warning .toast-icon { color: #d97706; }
+      .app-toast--warning .toast-progress { background: #f59e0b; }
+
+      .app-toast--info,
+      .app-toast--debug {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+      }
+      .app-toast--info .toast-icon,
+      .app-toast--debug .toast-icon { color: #1d4ed8; }
+      .app-toast--info .toast-progress,
+      .app-toast--debug .toast-progress { background: #3b82f6; }
+
+      .toast-icon {
+        font-size: 17px;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+
+      .toast-body {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: #111827;
+        line-height: 1.5;
+        flex: 1;
+      }
+
+      .toast-close {
+        background: none;
+        border: none;
+        font-size: 18px;
+        line-height: 1;
+        color: #9ca3af;
+        cursor: pointer;
+        padding: 0;
+        flex-shrink: 0;
+        margin-top: -1px;
+        transition: color .15s;
+      }
+      .toast-close:hover { color: #374151; }
+
+      /* Progress bar */
+      .toast-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        border-radius: 0 0 12px 12px;
+        animation: toastProgress 4s linear forwards;
+      }
+
+      @keyframes toastProgress {
+        from { width: 100%; }
+        to   { width: 0%; }
+      }
+    </style>
+
+    <script>
+      (function () {
+        const DURATION = 4000;
+
+        function dismissToast(toast) {
+          toast.classList.add('hiding');
+          setTimeout(() => toast.remove(), 300);
+        }
+
+        document.querySelectorAll('.app-toast').forEach(toast => {
+          // Auto-dismiss
+          const timer = setTimeout(() => dismissToast(toast), DURATION);
+
+          // Manual close
+          toast.querySelector('.toast-close')?.addEventListener('click', () => {
+            clearTimeout(timer);
+            dismissToast(toast);
+          });
+        });
+      })();
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

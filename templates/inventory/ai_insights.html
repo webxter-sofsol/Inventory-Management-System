@@ -1,0 +1,433 @@
+{% extends 'base.html' %}
+{% block title %}AI Insights - Inventory Management{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .page-header h1 { font-size:22px; font-weight:700; color:#111827; margin:0; }
+  .page-header p  { font-size:13px; color:#6b7280; margin:3px 0 0; }
+
+  /* ── Skeleton ── */
+  .skeleton { background:linear-gradient(90deg,#f3f4f6 25%,#e9eaec 50%,#f3f4f6 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .skel-line  { height:14px; margin-bottom:8px; }
+  .skel-line.short { width:40%; }
+  .skel-line.med   { width:65%; }
+  .skel-line.full  { width:100%; }
+  .skel-block { height:80px; width:100%; border-radius:10px; }
+  .skel-ring  { width:90px; height:90px; border-radius:50%; flex-shrink:0; }
+
+  /* ── Loading overlay ── */
+  #loadingState { display:flex; flex-direction:column; gap:16px; }
+  #contentState { display:none; }
+
+  /* ── Preloader card ── */
+  .preloader-card {
+    background:#fff; border:1px solid #e5e7eb; border-radius:14px;
+    padding:32px 28px; display:flex; align-items:center; gap:24px;
+    margin-bottom:20px;
+  }
+  .preloader-spinner {
+    width:56px; height:56px; border-radius:50%;
+    border:4px solid #e5e7eb;
+    border-top-color:#1d4ed8;
+    animation:spin .8s linear infinite;
+    flex-shrink:0;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .preloader-text h3 { font-size:15px; font-weight:700; color:#111827; margin:0 0 4px; }
+  .preloader-text p  { font-size:13px; color:#6b7280; margin:0; }
+
+  /* ── Health score ring ── */
+  .health-card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:24px; display:flex; align-items:center; gap:24px; margin-bottom:20px; }
+  .health-ring { position:relative; width:90px; height:90px; flex-shrink:0; }
+  .health-ring svg { transform:rotate(-90deg); }
+  .health-ring .ring-bg  { fill:none; stroke:#f3f4f6; stroke-width:8; }
+  .health-ring .ring-val { fill:none; stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset .8s ease; stroke-dasharray:238.76; stroke-dashoffset:238.76; }
+  .health-ring .ring-text { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .health-ring .ring-num  { font-size:22px; font-weight:700; color:#111827; line-height:1; }
+  .health-ring .ring-lbl  { font-size:10px; color:#9ca3af; text-transform:uppercase; letter-spacing:.4px; }
+  .health-summary { font-size:14px; color:#374151; line-height:1.6; }
+
+  /* ── Section cards ── */
+  .section-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; margin-bottom:16px; }
+  .sc-header { padding:14px 20px; border-bottom:1px solid #f3f4f6; display:flex; align-items:center; justify-content:space-between; }
+  .sc-header h3 { font-size:14px; font-weight:700; color:#111827; margin:0; display:flex; align-items:center; gap:8px; }
+  .sc-body { padding:16px 20px; }
+
+  /* ── Recommendations ── */
+  .rec-item { display:flex; gap:14px; padding:12px 0; border-bottom:1px solid #f9fafb; }
+  .rec-item:last-child { border-bottom:none; padding-bottom:0; }
+  .rec-priority { width:6px; border-radius:99px; flex-shrink:0; align-self:stretch; min-height:40px; }
+  .rec-priority.high   { background:#ef4444; }
+  .rec-priority.medium { background:#f59e0b; }
+  .rec-priority.low    { background:#22c55e; }
+  .rec-title  { font-size:13.5px; font-weight:600; color:#111827; margin-bottom:3px; }
+  .rec-detail { font-size:12.5px; color:#6b7280; margin-bottom:4px; }
+  .rec-action { font-size:12px; font-weight:600; color:#1d4ed8; }
+  .priority-badge { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:2px 7px; border-radius:20px; }
+  .priority-badge.high   { background:#fee2e2; color:#dc2626; }
+  .priority-badge.medium { background:#fef3c7; color:#b45309; }
+  .priority-badge.low    { background:#dcfce7; color:#15803d; }
+
+  /* ── Alerts ── */
+  .ai-alert { display:flex; gap:10px; padding:10px 14px; border-radius:8px; margin-bottom:8px; font-size:13px; }
+  .ai-alert:last-child { margin-bottom:0; }
+  .ai-alert.warning { background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .ai-alert.danger  { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+  .ai-alert.info    { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+  .ai-alert-icon { font-size:15px; flex-shrink:0; margin-top:1px; }
+  .ai-alert-title { font-weight:600; margin-bottom:2px; }
+
+  /* ── Predictions ── */
+  .pred-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+  @media(max-width:600px){ .pred-grid { grid-template-columns:1fr; } }
+  .pred-card { background:#f9fafb; border:1px solid #f3f4f6; border-radius:10px; padding:14px; text-align:center; }
+  .pred-val  { font-size:20px; font-weight:700; color:#111827; }
+  .pred-lbl  { font-size:11px; color:#9ca3af; text-transform:uppercase; letter-spacing:.4px; margin-top:3px; }
+  .pred-val.positive { color:#16a34a; }
+  .pred-val.negative { color:#dc2626; }
+
+  .list-bullets { list-style:none; padding:0; margin:0; }
+  .list-bullets li { display:flex; gap:8px; font-size:13px; color:#374151; padding:5px 0; border-bottom:1px solid #f9fafb; }
+  .list-bullets li:last-child { border-bottom:none; }
+  .list-bullets li::before { content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0; margin-top:6px; }
+  .list-bullets.risks li::before        { background:#ef4444; }
+  .list-bullets.opportunities li::before { background:#22c55e; }
+
+  /* ── Chat ── */
+  .chat-box { border:1.5px solid #e5e7eb; border-radius:10px; overflow:hidden; }
+  .chat-messages { min-height:120px; max-height:300px; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; background:#f9fafb; }
+  .chat-msg { max-width:85%; padding:10px 14px; border-radius:10px; font-size:13.5px; line-height:1.5; }
+  .chat-msg.user { background:#1d4ed8; color:#fff; align-self:flex-end; border-bottom-right-radius:3px; }
+  .chat-msg.ai   { background:#fff; color:#111827; border:1px solid #e5e7eb; align-self:flex-start; border-bottom-left-radius:3px; }
+  .chat-msg.thinking { color:#9ca3af; font-style:italic; }
+  .chat-input-row { display:flex; gap:8px; padding:10px; border-top:1px solid #e5e7eb; background:#fff; }
+  .chat-input { flex:1; border:1.5px solid #e5e7eb; border-radius:8px; padding:8px 12px; font-size:13px; outline:none; }
+  .chat-input:focus { border-color:#1d4ed8; box-shadow:0 0 0 3px rgba(29,78,216,.08); }
+  .chat-send { height:36px; padding:0 16px; background:#1d4ed8; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; }
+  .chat-send:hover { background:#1648c0; }
+
+  .btn-refresh { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 14px; font-size:12.5px; font-weight:600; border-radius:8px; border:1.5px solid #e5e7eb; background:#fff; color:#374151; cursor:pointer; transition:all .15s; }
+  .btn-refresh:hover { border-color:#1d4ed8; color:#1d4ed8; background:#eff6ff; }
+  .btn-refresh.spinning i { animation:spin .8s linear infinite; }
+
+  .confidence-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; }
+  .confidence-badge.high   { background:#dcfce7; color:#15803d; }
+  .confidence-badge.medium { background:#fef3c7; color:#b45309; }
+  .confidence-badge.low    { background:#fee2e2; color:#dc2626; }
+
+  /* ── Error state ── */
+  #errorState { display:none; }
+  .error-card { background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:24px; text-align:center; }
+  .error-card h3 { font-size:15px; font-weight:700; color:#dc2626; margin:0 0 6px; }
+  .error-card p  { font-size:13px; color:#6b7280; margin:0 0 16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-stars me-2" style="color:#1d4ed8;"></i>AI Insights</h1>
+    <p>Powered by OpenAI — analysis based on your live inventory data</p>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <a href="{% url 'pnl' %}" style="display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 16px;font-size:13px;font-weight:600;border-radius:8px;border:1.5px solid #e5e7eb;background:#fff;color:#374151;text-decoration:none;">
+      <i class="bi bi-graph-up-arrow"></i> P&amp;L Dashboard
+    </a>
+    <button class="btn-refresh" id="refreshBtn" onclick="loadInsights(true)">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+  </div>
+</div>
+
+<!-- ── Loading skeleton ── -->
+<div id="loadingState">
+  <div class="preloader-card">
+    <div class="preloader-spinner"></div>
+    <div class="preloader-text">
+      <h3>Analysing your inventory…</h3>
+      <p>AI is reviewing your stock levels, transactions, and financials. This takes a few seconds.</p>
+    </div>
+  </div>
+
+  <!-- Skeleton placeholders -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="section-card">
+      <div class="sc-header"><h3>Recommendations</h3></div>
+      <div class="sc-body" style="display:flex;flex-direction:column;gap:14px;">
+        {% for i in "123" %}<div><div class="skeleton skel-line med"></div><div class="skeleton skel-line full"></div><div class="skeleton skel-line short"></div></div>{% endfor %}
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="sc-header"><h3>Predictions</h3></div>
+      <div class="sc-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+          {% for i in "123" %}<div class="skeleton skel-block" style="height:70px;"></div>{% endfor %}
+        </div>
+        <div class="skeleton skel-line full"></div>
+        <div class="skeleton skel-line med"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Error state ── -->
+<div id="errorState">
+  <div class="error-card">
+    <h3><i class="bi bi-exclamation-circle me-2"></i>Could not load AI insights</h3>
+    <p id="errorMsg">An error occurred while contacting OpenAI.</p>
+    <button class="btn-refresh" onclick="loadInsights(true)" style="margin:0 auto;">
+      <i class="bi bi-arrow-clockwise"></i> Try Again
+    </button>
+  </div>
+</div>
+
+<!-- ── Content (hidden until loaded) ── -->
+<div id="contentState">
+
+  <!-- Health score + summary -->
+  <div class="health-card">
+    <div class="health-ring">
+      <svg width="90" height="90" viewBox="0 0 90 90">
+        <circle class="ring-bg" cx="45" cy="45" r="38"/>
+        <circle class="ring-val" id="healthRing" cx="45" cy="45" r="38" stroke="#22c55e"/>
+      </svg>
+      <div class="ring-text">
+        <span class="ring-num" id="healthNum">—</span>
+        <span class="ring-lbl">Health</span>
+      </div>
+    </div>
+    <div>
+      <div class="health-summary" id="healthSummary">Loading…</div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;" id="forecastBadge"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+    <!-- Recommendations -->
+    <div>
+      <div class="section-card">
+        <div class="sc-header">
+          <h3><i class="bi bi-lightbulb text-warning"></i> Recommendations</h3>
+          <span style="font-size:12px;color:#9ca3af;" id="recCount"></span>
+        </div>
+        <div class="sc-body" id="recList"></div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="section-card" id="alertsCard" style="display:none;">
+        <div class="sc-header">
+          <h3><i class="bi bi-bell text-danger"></i> AI Alerts</h3>
+        </div>
+        <div class="sc-body" id="alertsList"></div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div>
+      <!-- Predictions -->
+      <div class="section-card" style="margin-bottom:16px;">
+        <div class="sc-header">
+          <h3><i class="bi bi-graph-up text-primary"></i> 30-Day Predictions</h3>
+          <span id="confidenceBadge"></span>
+        </div>
+        <div class="sc-body" id="predictionsBody"></div>
+      </div>
+
+      <!-- Chat -->
+      <div class="section-card">
+        <div class="sc-header">
+          <h3><i class="bi bi-chat-dots text-primary"></i> Ask AI</h3>
+        </div>
+        <div class="chat-box">
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-msg ai">Hi! I can answer questions about your inventory, suggest reorder quantities, explain trends, or help you optimise profitability. What would you like to know?</div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" class="chat-input" id="chatInput" placeholder="e.g. Which products should I reorder this week?" maxlength="300">
+            <button class="chat-send" onclick="sendChat()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const DATA_URL    = '{% url "ai_insights_data" %}';
+  const CHAT_URL    = '{% url "ai_chat" %}';
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function fmt(n) {
+    const v = parseFloat(n) || 0;
+    return (v >= 0 ? '+' : '') + '$' + Math.abs(v).toLocaleString('en-US', {maximumFractionDigits:0});
+  }
+
+  function show(id)  { document.getElementById(id).style.display = ''; }
+  function hide(id)  { document.getElementById(id).style.display = 'none'; }
+  function block(id) { document.getElementById(id).style.display = 'block'; }
+
+  async function loadInsights(force = false) {
+    // Show loading, hide others
+    block('loadingState');
+    hide('contentState');
+    hide('errorState');
+
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('spinning');
+
+    try {
+      const res = await fetch(DATA_URL + (force ? '?refresh=1' : ''));
+      const data = await res.json();
+
+      if (!data.ok) throw new Error(data.error || 'Unknown error');
+
+      renderInsights(data.insights);
+      hide('loadingState');
+      block('contentState');
+    } catch (e) {
+      hide('loadingState');
+      document.getElementById('errorMsg').textContent = e.message || 'Could not reach AI service.';
+      block('errorState');
+    } finally {
+      btn.classList.remove('spinning');
+    }
+  }
+
+  function renderInsights(ins) {
+    // Health ring
+    const score = ins.health_score || 0;
+    const ring  = document.getElementById('healthRing');
+    const circumference = 238.76;
+    const color = score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444';
+    ring.setAttribute('stroke', color);
+    setTimeout(() => {
+      ring.style.strokeDashoffset = circumference - (score / 100) * circumference;
+    }, 100);
+    document.getElementById('healthNum').textContent = score;
+    document.getElementById('healthSummary').textContent = ins.summary || '';
+
+    // Forecast badge
+    const pred = ins.predictions?.next_30_days;
+    if (pred) {
+      const profit = parseFloat(pred.expected_profit) || 0;
+      const conf   = pred.confidence || 'low';
+      document.getElementById('forecastBadge').innerHTML =
+        `<span style="font-size:12px;color:#6b7280;">30-day forecast:</span>
+         <span style="font-size:12px;font-weight:600;color:${profit>=0?'#16a34a':'#dc2626'};">${fmt(profit)} profit</span>
+         <span class="confidence-badge ${conf}">${conf} confidence</span>`;
+    }
+
+    // Recommendations
+    const recs = ins.recommendations || [];
+    document.getElementById('recCount').textContent = recs.length + ' item' + (recs.length !== 1 ? 's' : '');
+    document.getElementById('recList').innerHTML = recs.length
+      ? recs.map(r => `
+          <div class="rec-item">
+            <div class="rec-priority ${esc(r.priority)}"></div>
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+                <span class="rec-title">${esc(r.title)}</span>
+                <span class="priority-badge ${esc(r.priority)}">${esc(r.priority)}</span>
+              </div>
+              <div class="rec-detail">${esc(r.detail)}</div>
+              <div class="rec-action"><i class="bi bi-arrow-right me-1"></i>${esc(r.action)}</div>
+            </div>
+          </div>`).join('')
+      : '<p style="font-size:13px;color:#9ca3af;text-align:center;padding:20px 0;">No recommendations at this time.</p>';
+
+    // Alerts
+    const alerts = ins.alerts || [];
+    if (alerts.length) {
+      document.getElementById('alertsList').innerHTML = alerts.map(a => `
+        <div class="ai-alert ${esc(a.type)}">
+          <div class="ai-alert-icon">
+            <i class="bi bi-${a.type==='danger'?'exclamation-circle-fill':a.type==='warning'?'exclamation-triangle-fill':'info-circle-fill'}"></i>
+          </div>
+          <div>
+            <div class="ai-alert-title">${esc(a.title)}</div>
+            <div>${esc(a.message)}</div>
+          </div>
+        </div>`).join('');
+      document.getElementById('alertsCard').style.display = '';
+    }
+
+    // Predictions
+    if (pred) {
+      const conf = pred.confidence || 'low';
+      document.getElementById('confidenceBadge').innerHTML =
+        `<span class="confidence-badge ${conf}">${conf} confidence</span>`;
+
+      const risks = (ins.predictions?.risks || []);
+      const opps  = (ins.predictions?.opportunities || []);
+
+      document.getElementById('predictionsBody').innerHTML = `
+        <div class="pred-grid">
+          <div class="pred-card">
+            <div class="pred-val positive">$${(parseFloat(pred.expected_revenue)||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+            <div class="pred-lbl">Revenue</div>
+          </div>
+          <div class="pred-card">
+            <div class="pred-val">$${(parseFloat(pred.expected_cost)||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+            <div class="pred-lbl">Cost</div>
+          </div>
+          <div class="pred-card">
+            <div class="pred-val ${parseFloat(pred.expected_profit)>=0?'positive':'negative'}">${fmt(pred.expected_profit)}</div>
+            <div class="pred-lbl">Profit</div>
+          </div>
+        </div>
+        ${pred.reasoning ? `<p style="font-size:12.5px;color:#6b7280;margin:0 0 12px;">${esc(pred.reasoning)}</p>` : ''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          ${risks.length ? `<div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#9ca3af;margin-bottom:6px;">Risks</div>
+            <ul class="list-bullets risks">${risks.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>
+          </div>` : ''}
+          ${opps.length ? `<div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#9ca3af;margin-bottom:6px;">Opportunities</div>
+            <ul class="list-bullets opportunities">${opps.map(o=>`<li>${esc(o)}</li>`).join('')}</ul>
+          </div>` : ''}
+        </div>`;
+    }
+  }
+
+  // Chat
+  async function sendChat() {
+    const input    = document.getElementById('chatInput');
+    const messages = document.getElementById('chatMessages');
+    const q = input.value.trim();
+    if (!q) return;
+
+    messages.innerHTML += `<div class="chat-msg user">${esc(q)}</div>`;
+    messages.innerHTML += `<div class="chat-msg ai thinking" id="thinking">Thinking…</div>`;
+    input.value = '';
+    messages.scrollTop = messages.scrollHeight;
+
+    try {
+      const res  = await fetch(`${CHAT_URL}?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      document.getElementById('thinking')?.remove();
+      messages.innerHTML += `<div class="chat-msg ai">${esc(data.answer)}</div>`;
+    } catch {
+      document.getElementById('thinking')?.remove();
+      messages.innerHTML += `<div class="chat-msg ai">Sorry, something went wrong.</div>`;
+    }
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  document.getElementById('chatInput')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendChat();
+  });
+
+  // Kick off on page load
+  loadInsights();
+</script>
+{% endblock %}

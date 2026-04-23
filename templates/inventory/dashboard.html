@@ -1,54 +1,404 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Dashboard - Inventory Management System{% endblock %}
 
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; background: #f4f6fb; }
+
+  /* ── Stat cards ── */
+  .stat-card {
+    border: none;
+    border-radius: 14px;
+    padding: 24px 28px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.09); }
+
+  .stat-icon {
+    width: 52px; height: 52px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .stat-label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .6px; color: #6b7280; margin-bottom: 4px; }
+  .stat-value { font-size: 28px; font-weight: 700; color: #111827; line-height: 1; }
+  .stat-sub   { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+
+  .card-blue   { background: #eff6ff; } .icon-blue   { background: #dbeafe; color: #1d4ed8; }
+  .card-green  { background: #f0fdf4; } .icon-green  { background: #dcfce7; color: #16a34a; }
+  .card-amber  { background: #fffbeb; } .icon-amber  { background: #fef3c7; color: #d97706; }
+  .card-red    { background: #fef2f2; } .icon-red    { background: #fee2e2; color: #dc2626; }
+
+  /* ── Section cards ── */
+  .section-card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    overflow: hidden;
+  }
+  .section-card .card-header {
+    background: #fff;
+    border-bottom: 1px solid #f3f4f6;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-card .card-header h6 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+  }
+  .section-card .card-body { padding: 0; background: #fff; }
+
+  /* ── Table ── */
+  .dash-table { margin: 0; }
+  .dash-table thead th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #9ca3af;
+    background: #f9fafb;
+    border-bottom: 1px solid #f3f4f6;
+    padding: 10px 20px;
+  }
+  .dash-table tbody td {
+    font-size: 13px;
+    color: #374151;
+    padding: 12px 20px;
+    border-bottom: 1px solid #f9fafb;
+    vertical-align: middle;
+  }
+  .dash-table tbody tr:last-child td { border-bottom: none; }
+  .dash-table tbody tr:hover td { background: #f9fafb; }
+
+  /* ── Badges ── */
+  .badge-purchase { background: #dcfce7; color: #15803d; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+  .badge-sale     { background: #dbeafe; color: #1d4ed8; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+  .badge-low      { background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+  .badge-out      { background: #fee2e2; color: #dc2626; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+
+  /* ── Alert list ── */
+  .alert-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 20px;
+    border-bottom: 1px solid #f9fafb;
+    gap: 12px;
+  }
+  .alert-item:last-child { border-bottom: none; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; }
+  .alert-name { font-size: 13px; font-weight: 500; color: #111827; }
+  .alert-cat  { font-size: 11px; color: #9ca3af; }
+  .alert-qty  { font-size: 13px; font-weight: 600; color: #dc2626; white-space: nowrap; }
+
+  /* ── Category bar ── */
+  .cat-row { padding: 12px 20px; border-bottom: 1px solid #f9fafb; }
+  .cat-row:last-child { border-bottom: none; }
+  .cat-name { font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 5px; }
+  .cat-bar-bg { height: 6px; background: #f3f4f6; border-radius: 99px; overflow: hidden; }
+  .cat-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
+  .cat-meta { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+
+  /* ── Quick actions ── */
+  .quick-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 16px;
+    border-radius: 10px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all .15s;
+  }
+  .quick-btn:hover { border-color: #1d4ed8; color: #1d4ed8; background: #eff6ff; }
+  .quick-btn .q-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+
+  /* ── Page header ── */
+  .page-header { margin-bottom: 28px; }
+  .page-header h1 { font-size: 22px; font-weight: 700; color: #111827; margin: 0; }
+  .page-header p  { font-size: 13px; color: #6b7280; margin: 4px 0 0; }
+
+  .view-all { font-size: 12px; font-weight: 500; color: #1d4ed8; text-decoration: none; }
+  .view-all:hover { text-decoration: underline; }
+
+  .qty-pos { color: #16a34a; font-weight: 600; }
+  .qty-neg { color: #dc2626; font-weight: 600; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h1 class="mb-4">Dashboard</h1>
-        <div class="alert alert-success">
-            <h4 class="alert-heading">Welcome, {{ user.email }}!</h4>
-            <p>You are successfully logged in to the Inventory Management System.</p>
-            <hr>
-            <p class="mb-0">Authentication system is working correctly with email-based login.</p>
-        </div>
-    </div>
+
+<!-- Page header -->
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1>Dashboard</h1>
+    <p>Welcome back, {{ user.email }} &mdash; here's what's happening today.</p>
+  </div>
+  <a href="{% url 'transaction_create' %}" class="btn btn-primary btn-sm" style="border-radius:8px;font-size:13px;font-weight:600;padding:8px 16px;">
+    <i class="bi bi-plus-lg me-1"></i> Record Transaction
+  </a>
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title">Products</h5>
-                <p class="card-text display-4">0</p>
-                <a href="{% url 'product_list_view' %}" class="btn btn-primary">View Products</a>
-            </div>
-        </div>
+<!-- ── Stat cards ── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card card-blue">
+      <div class="stat-icon icon-blue"><i class="bi bi-box-seam"></i></div>
+      <div>
+        <div class="stat-label">Total Products</div>
+        <div class="stat-value">{{ total_products }}</div>
+        <div class="stat-sub">across all categories</div>
+      </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title">Total Value</h5>
-                <p class="card-text display-4">$0</p>
-            </div>
-        </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card card-green">
+      <div class="stat-icon icon-green"><i class="bi bi-currency-dollar"></i></div>
+      <div>
+        <div class="stat-label">Inventory Value</div>
+        <div class="stat-value">${{ total_value|floatformat:0 }}</div>
+        <div class="stat-sub">total stock value</div>
+      </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title">Low Stock</h5>
-                <p class="card-text display-4">0</p>
-            </div>
-        </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card card-amber">
+      <div class="stat-icon icon-amber"><i class="bi bi-exclamation-triangle"></i></div>
+      <div>
+        <div class="stat-label">Low Stock</div>
+        <div class="stat-value">{{ low_stock_count }}</div>
+        <div class="stat-sub">items need attention</div>
+      </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title">Transactions</h5>
-                <p class="card-text display-4">0</p>
-                <a href="{% url 'transaction_history' %}" class="btn btn-primary">View History</a>
-            </div>
-        </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card card-red">
+      <div class="stat-icon icon-red"><i class="bi bi-slash-circle"></i></div>
+      <div>
+        <div class="stat-label">Out of Stock</div>
+        <div class="stat-value">{{ out_of_stock }}</div>
+        <div class="stat-sub">items unavailable</div>
+      </div>
     </div>
+  </div>
 </div>
+
+<!-- ── Main content row ── -->
+<div class="row g-3 mb-3">
+
+  <!-- Recent Transactions -->
+  <div class="col-12 col-xl-7">
+    <div class="section-card h-100">
+      <div class="card-header">
+        <h6><i class="bi bi-arrow-left-right me-2 text-primary"></i>Recent Transactions</h6>
+        <a href="{% url 'transaction_history' %}" class="view-all">View all &rarr;</a>
+      </div>
+      <div class="card-body">
+        {% if recent_transactions %}
+        <table class="table dash-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Type</th>
+              <th>Qty</th>
+              <th>Date</th>
+              <th>By</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tx in recent_transactions %}
+            <tr>
+              <td>
+                <div style="font-weight:500;color:#111827;">{{ tx.product.name }}</div>
+                <div style="font-size:11px;color:#9ca3af;">{{ tx.product.category.name }}</div>
+              </td>
+              <td>
+                {% if tx.transaction_type == 'purchase' %}
+                  <span class="badge-purchase">Purchase</span>
+                {% else %}
+                  <span class="badge-sale">Sale</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if tx.quantity_change > 0 %}
+                  <span class="qty-pos">+{{ tx.quantity_change }}</span>
+                {% else %}
+                  <span class="qty-neg">{{ tx.quantity_change }}</span>
+                {% endif %}
+              </td>
+              <td style="color:#6b7280;">{{ tx.timestamp|date:"M d, H:i" }}</td>
+              <td style="color:#6b7280;">{{ tx.user.email|truncatechars:18 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-inbox" style="font-size:32px;opacity:.3;"></i>
+          <p class="mt-2 mb-0" style="font-size:13px;">No transactions yet</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div class="col-12 col-xl-5 d-flex flex-column gap-3">
+
+    <!-- Low Stock Alerts -->
+    <div class="section-card">
+      <div class="card-header">
+        <h6><i class="bi bi-bell me-2 text-warning"></i>Low Stock Alerts</h6>
+        <a href="{% url 'product_list_view' %}?stock_status=low-stock" class="view-all">View all &rarr;</a>
+      </div>
+      <div class="card-body">
+        {% if low_stock_alerts %}
+          {% for alert in low_stock_alerts|slice:":6" %}
+          <div class="alert-item">
+            <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+              <div class="alert-dot"></div>
+              <div class="min-w-0">
+                <div class="alert-name text-truncate">{{ alert.product.name }}</div>
+                <div class="alert-cat">{{ alert.product.category.name }}</div>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="alert-qty">{{ alert.product.quantity }} left</div>
+              <div style="font-size:11px;color:#9ca3af;">threshold {{ alert.product.alert_threshold }}</div>
+            </div>
+          </div>
+          {% endfor %}
+          {% if low_stock_count > 6 %}
+          <div class="text-center py-2" style="font-size:12px;color:#9ca3af;">
+            +{{ low_stock_count|add:"-6" }} more items
+          </div>
+          {% endif %}
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-check-circle" style="font-size:28px;color:#16a34a;opacity:.6;"></i>
+          <p class="mt-2 mb-0" style="font-size:13px;">All stock levels are healthy</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section-card">
+      <div class="card-header">
+        <h6><i class="bi bi-lightning me-2 text-primary"></i>Quick Actions</h6>
+      </div>
+      <div class="card-body p-3">
+        <div class="d-flex flex-column gap-2">
+          <a href="{% url 'product_create' %}" class="quick-btn">
+            <div class="q-icon" style="background:#eff6ff;color:#1d4ed8;"><i class="bi bi-plus-lg"></i></div>
+            Add New Product
+          </a>
+          <a href="{% url 'transaction_create' %}" class="quick-btn">
+            <div class="q-icon" style="background:#f0fdf4;color:#16a34a;"><i class="bi bi-arrow-down-circle"></i></div>
+            Record Purchase
+          </a>
+          <a href="{% url 'transaction_create' %}" class="quick-btn">
+            <div class="q-icon" style="background:#fef3c7;color:#d97706;"><i class="bi bi-arrow-up-circle"></i></div>
+            Record Sale
+          </a>
+          <a href="{% url 'transaction_history' %}" class="quick-btn">
+            <div class="q-icon" style="background:#f5f3ff;color:#7c3aed;"><i class="bi bi-clock-history"></i></div>
+            View Transaction History
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Category breakdown ── -->
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <div class="section-card">
+      <div class="card-header">
+        <h6><i class="bi bi-grid me-2 text-primary"></i>Stock by Category</h6>
+        <a href="{% url 'category_list' %}" class="view-all">Manage &rarr;</a>
+      </div>
+      <div class="card-body">
+        {% if categories %}
+          {% with max_qty=categories.0.total_qty %}
+          {% for cat in categories %}
+          <div class="cat-row">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="cat-name">{{ cat.name }}</div>
+              <div style="font-size:12px;font-weight:600;color:#374151;">{{ cat.total_qty|default:0 }} units</div>
+            </div>
+            <div class="cat-bar-bg">
+              {% if max_qty and max_qty > 0 %}
+              <div class="cat-bar-fill" style="width:{% widthratio cat.total_qty|default:0 max_qty 100 %}%"></div>
+              {% endif %}
+            </div>
+            <div class="cat-meta">{{ cat.product_count }} product{{ cat.product_count|pluralize }}</div>
+          </div>
+          {% endfor %}
+          {% endwith %}
+        {% else %}
+        <div class="text-center py-4 text-muted" style="font-size:13px;">No categories yet</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Out of stock products -->
+  <div class="col-12 col-lg-6">
+    <div class="section-card">
+      <div class="card-header">
+        <h6><i class="bi bi-slash-circle me-2 text-danger"></i>Out of Stock</h6>
+        <a href="{% url 'product_list_view' %}?stock_status=out-of-stock" class="view-all">View all &rarr;</a>
+      </div>
+      <div class="card-body">
+        {% if out_of_stock > 0 %}
+          {% for product in out_of_stock_products %}
+          <div class="alert-item">
+            <div class="d-flex align-items-center gap-2">
+              <div style="width:8px;height:8px;border-radius:50%;background:#dc2626;flex-shrink:0;"></div>
+              <div>
+                <div class="alert-name">{{ product.name }}</div>
+                <div class="alert-cat">{{ product.category.name }}</div>
+              </div>
+            </div>
+            <a href="{% url 'transaction_create' %}" class="btn btn-sm" style="font-size:11px;padding:4px 10px;border-radius:6px;background:#fee2e2;color:#dc2626;border:none;font-weight:600;">Restock</a>
+          </div>
+          {% endfor %}
+          <div class="text-center py-3">
+            <a href="{% url 'product_list_view' %}?stock_status=out-of-stock" style="font-size:12px;color:#1d4ed8;text-decoration:none;font-weight:500;">
+              View all {{ out_of_stock }} out-of-stock item{{ out_of_stock|pluralize }} &rarr;
+            </a>
+          </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-check-circle" style="font-size:28px;color:#16a34a;opacity:.6;"></i>
+          <p class="mt-2 mb-0" style="font-size:13px;">No out-of-stock items</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
 {% endblock %}

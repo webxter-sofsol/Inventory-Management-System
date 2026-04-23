@@ -11,8 +11,44 @@ from .services import ProductService
 
 @login_required
 def dashboard(request):
-    """Dashboard view - requires authentication"""
-    return render(request, 'inventory/dashboard.html')
+    """Dashboard view with real metrics"""
+    from django.db.models import Sum, Count, F
+    from .models import LowStockAlert
+
+    total_products = Product.objects.count()
+    total_value = Product.objects.aggregate(
+        val=Sum(F('quantity') * F('price'))
+    )['val'] or 0
+
+    out_of_stock = Product.objects.filter(quantity=0).count()
+    low_stock_alerts = LowStockAlert.objects.filter(is_active=True).select_related(
+        'product', 'product__category'
+    ).order_by('created_at')
+    low_stock_count = low_stock_alerts.count()
+
+    recent_transactions = StockTransaction.objects.select_related(
+        'product', 'product__category', 'user'
+    ).order_by('-timestamp')[:10]
+
+    # Category breakdown
+    categories = Category.objects.annotate(
+        product_count=Count('products'),
+        total_qty=Sum('products__quantity'),
+    ).order_by('-product_count')
+
+    out_of_stock_products = Product.objects.filter(quantity=0).select_related('category')[:8]
+
+    context = {
+        'total_products': total_products,
+        'total_value': total_value,
+        'low_stock_count': low_stock_count,
+        'out_of_stock': out_of_stock,
+        'low_stock_alerts': low_stock_alerts,
+        'recent_transactions': recent_transactions,
+        'categories': categories,
+        'out_of_stock_products': out_of_stock_products,
+    }
+    return render(request, 'inventory/dashboard.html', context)
 
 
 class ProductListView(LoginRequiredMixin, ListView):
@@ -216,7 +252,7 @@ def bulk_update_submit(request):
     return redirect('product_list_view')
 
 
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from .services import TransactionService
 from .forms import TransactionForm
 from .models import StockTransaction
@@ -378,9 +414,186 @@ class TransactionHistoryView(LoginRequiredMixin, ListView):
         return context
 
 
+@login_required
 def reports(request):
-    """Reports view - placeholder"""
-    return render(request, 'inventory/reports.html')
+    """Inventory report with category filter and preview"""
+    from django.db.models import Sum, Count, F, Q
+    from .models import LowStockAlert
+
+    category_filter = request.GET.get('category', '').strip()
+
+    products = Product.objects.select_related('category').annotate(
+        report_total_value=F('quantity') * F('price')
+    )
+    if category_filter:
+        products = products.filter(category__name=category_filter)
+    products = products.order_by('category__name', 'name')
+
+    # Summary stats
+    summary = products.aggregate(
+        total_products=Count('id'),
+        total_units=Sum('quantity'),
+        total_value=Sum(F('quantity') * F('price')),
+    )
+
+    low_stock_count = products.filter(quantity__lt=F('alert_threshold')).count()
+    out_of_stock_count = products.filter(quantity=0).count()
+
+    categories = Category.objects.all().order_by('name')
+
+    context = {
+        'products': products,
+        'categories': categories,
+        'category_filter': category_filter,
+        'summary': summary,
+        'low_stock_count': low_stock_count,
+        'out_of_stock_count': out_of_stock_count,
+    }
+    return render(request, 'inventory/reports.html', context)
+
+
+@login_required
+def export_csv(request):
+    """Export inventory report as CSV"""
+    import csv
+    from django.db.models import F
+    from django.utils import timezone
+
+    category_filter = request.GET.get('category', '').strip()
+
+    products = Product.objects.select_related('category').order_by('category__name', 'name')
+    if category_filter:
+        products = products.filter(category__name=category_filter)
+
+    filename = f"inventory_report_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Product Name', 'Category', 'Quantity', 'Unit Price ($)',
+                     'Total Value ($)', 'Alert Threshold', 'Status'])
+
+    for p in products:
+        total_val = p.quantity * p.price
+        writer.writerow([
+            p.name,
+            p.category.name,
+            p.quantity,
+            f'{p.price:.2f}',
+            f'{total_val:.2f}',
+            p.alert_threshold,
+            p.stock_status,
+        ])
+
+    return response
+
+
+@login_required
+def export_pdf(request):
+    """Export inventory report as PDF using ReportLab"""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+    from django.db.models import F
+    from django.utils import timezone
+    import io
+
+    category_filter = request.GET.get('category', '').strip()
+
+    products = Product.objects.select_related('category').order_by('category__name', 'name')
+    if category_filter:
+        products = products.filter(category__name=category_filter)
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=1.5 * cm,
+        leftMargin=1.5 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=1.5 * cm,
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('title', fontSize=16, fontName='Helvetica-Bold',
+                                 spaceAfter=4, textColor=colors.HexColor('#111827'))
+    sub_style = ParagraphStyle('sub', fontSize=9, fontName='Helvetica',
+                               textColor=colors.HexColor('#6b7280'), spaceAfter=16)
+    header_style = ParagraphStyle('header', fontSize=8, fontName='Helvetica-Bold',
+                                  textColor=colors.white, alignment=TA_CENTER)
+
+    elements = []
+
+    # Title
+    title_text = 'Inventory Report'
+    if category_filter:
+        title_text += f' — {category_filter}'
+    elements.append(Paragraph(title_text, title_style))
+    elements.append(Paragraph(
+        f'Generated on {timezone.now().strftime("%B %d, %Y at %H:%M")}',
+        sub_style
+    ))
+
+    # Table data
+    col_headers = ['Product Name', 'Category', 'Qty', 'Unit Price', 'Total Value', 'Threshold', 'Status']
+    data = [col_headers]
+
+    status_colors = {
+        'in-stock': colors.HexColor('#15803d'),
+        'low-stock': colors.HexColor('#b45309'),
+        'out-of-stock': colors.HexColor('#dc2626'),
+    }
+
+    for p in products:
+        total_val = p.quantity * p.price
+        data.append([
+            p.name,
+            p.category.name,
+            str(p.quantity),
+            f'${p.price:.2f}',
+            f'${total_val:.2f}',
+            str(p.alert_threshold),
+            p.stock_status.replace('-', ' ').title(),
+        ])
+
+    col_widths = [6 * cm, 3.5 * cm, 2 * cm, 2.8 * cm, 3 * cm, 2.5 * cm, 3 * cm]
+
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(TableStyle([
+        # Header row
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1d4ed8')),
+        ('TEXTCOLOR',  (0, 0), (-1, 0), colors.white),
+        ('FONTNAME',   (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE',   (0, 0), (-1, 0), 8),
+        ('ALIGN',      (0, 0), (-1, 0), 'CENTER'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING',    (0, 0), (-1, 0), 8),
+        # Body rows
+        ('FONTNAME',   (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE',   (0, 1), (-1, -1), 8),
+        ('TOPPADDING',    (0, 1), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+        ('ALIGN',      (2, 1), (5, -1), 'CENTER'),
+        ('ALIGN',      (3, 1), (4, -1), 'RIGHT'),
+        # Alternating rows
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
+        # Grid
+        ('GRID',       (0, 0), (-1, -1), 0.4, colors.HexColor('#e5e7eb')),
+        ('LINEBELOW',  (0, 0), (-1, 0), 1, colors.HexColor('#1648c0')),
+    ]))
+
+    elements.append(table)
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    filename = f"inventory_report_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 
@@ -392,8 +605,13 @@ class CategoryListView(LoginRequiredMixin, ListView):
     paginate_by = 20
     
     def get_queryset(self):
-        """Get categories ordered by name"""
-        return Category.objects.all().order_by('name')
+        """Get categories with product counts and total values"""
+        from django.db.models import Count, Sum, F
+        return Category.objects.annotate(
+            product_count=Count('products'),
+            total_qty=Sum('products__quantity'),
+            total_value=Sum(F('products__quantity') * F('products__price')),
+        ).order_by('name')
 
 
 class CategoryCreateView(LoginRequiredMixin, CreateView):

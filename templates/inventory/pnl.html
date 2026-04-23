@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% block title %}P&L Dashboard - Inventory Management{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .page-header h1 { font-size:22px; font-weight:700; color:#111827; margin:0; }
+  .page-header p  { font-size:13px; color:#6b7280; margin:3px 0 0; }
+
+  /* Summary cards */
+  .summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
+  @media(max-width:600px){ .summary-grid { grid-template-columns:1fr; } }
+  .sum-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:20px; display:flex; align-items:center; gap:14px; }
+  .sum-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+  .sum-val { font-size:24px; font-weight:700; color:#111827; line-height:1; }
+  .sum-lbl { font-size:11px; color:#9ca3af; text-transform:uppercase; letter-spacing:.4px; margin-top:3px; }
+
+  /* Section card */
+  .section-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; margin-bottom:16px; }
+  .sc-header { padding:14px 20px; border-bottom:1px solid #f3f4f6; }
+  .sc-header h3 { font-size:14px; font-weight:700; color:#111827; margin:0; display:flex; align-items:center; gap:8px; }
+  .sc-body { padding:20px; }
+
+  /* Chart bars */
+  .chart-wrap { display:flex; align-items:flex-end; gap:8px; height:180px; padding-bottom:24px; position:relative; }
+  .chart-wrap::after { content:''; position:absolute; bottom:24px; left:0; right:0; height:1px; background:#f3f4f6; }
+  .bar-group { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; height:100%; justify-content:flex-end; }
+  .bar-pair { display:flex; gap:3px; align-items:flex-end; width:100%; justify-content:center; }
+  .bar { border-radius:4px 4px 0 0; min-height:2px; transition:height .4s ease; }
+  .bar.revenue { background:#3b82f6; }
+  .bar.cost    { background:#f87171; }
+  .bar.profit  { background:#22c55e; }
+  .bar-label { font-size:10px; color:#9ca3af; white-space:nowrap; margin-top:4px; }
+  .chart-legend { display:flex; gap:16px; margin-bottom:12px; }
+  .legend-item { display:flex; align-items:center; gap:5px; font-size:12px; color:#374151; }
+  .legend-dot { width:10px; height:10px; border-radius:2px; }
+
+  /* Monthly table */
+  .month-table { width:100%; border-collapse:collapse; }
+  .month-table th { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; color:#9ca3af; padding:8px 12px; text-align:right; border-bottom:1px solid #e5e7eb; }
+  .month-table th:first-child { text-align:left; }
+  .month-table td { font-size:13px; color:#374151; padding:10px 12px; text-align:right; border-bottom:1px solid #f9fafb; }
+  .month-table td:first-child { text-align:left; font-weight:500; color:#111827; }
+  .month-table tr:last-child td { border-bottom:none; }
+  .month-table tr:hover td { background:#fafafa; }
+  .profit-pos { color:#16a34a; font-weight:600; }
+  .profit-neg { color:#dc2626; font-weight:600; }
+
+  /* Top products */
+  .product-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #f9fafb; }
+  .product-row:last-child { border-bottom:none; }
+  .product-rank { width:22px; height:22px; border-radius:6px; background:#f3f4f6; color:#6b7280; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .product-rank.top3 { background:#fef3c7; color:#b45309; }
+  .product-bar-wrap { flex:1; }
+  .product-name-row { display:flex; justify-content:space-between; margin-bottom:4px; }
+  .product-name-row span:first-child { font-size:13px; font-weight:500; color:#111827; }
+  .product-name-row span:last-child  { font-size:13px; font-weight:600; color:#16a34a; }
+  .product-bar-bg { height:5px; background:#f3f4f6; border-radius:99px; overflow:hidden; }
+  .product-bar-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#1d4ed8,#3b82f6); }
+  .product-units { font-size:11px; color:#9ca3af; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-graph-up-arrow me-2" style="color:#16a34a;"></i>Profit &amp; Loss</h1>
+    <p>6-month financial overview based on transaction history</p>
+  </div>
+  <a href="{% url 'ai_insights' %}" style="display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 16px;font-size:13px;font-weight:600;border-radius:8px;border:1.5px solid #e5e7eb;background:#fff;color:#374151;text-decoration:none;">
+    <i class="bi bi-stars"></i> AI Insights
+  </a>
+</div>
+
+<!-- Summary cards -->
+<div class="summary-grid">
+  <div class="sum-card">
+    <div class="sum-icon" style="background:#eff6ff;color:#1d4ed8;"><i class="bi bi-arrow-up-circle"></i></div>
+    <div>
+      <div class="sum-val">${{ pnl.totals.total_revenue|floatformat:0 }}</div>
+      <div class="sum-lbl">Total Revenue (6mo)</div>
+    </div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-icon" style="background:#fef2f2;color:#dc2626;"><i class="bi bi-arrow-down-circle"></i></div>
+    <div>
+      <div class="sum-val">${{ pnl.totals.total_cost|floatformat:0 }}</div>
+      <div class="sum-lbl">Total Cost (6mo)</div>
+    </div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-icon" style="background:{% if pnl.totals.total_profit >= 0 %}#f0fdf4;color:#16a34a{% else %}#fef2f2;color:#dc2626{% endif %};"><i class="bi bi-currency-dollar"></i></div>
+    <div>
+      <div class="sum-val" style="color:{% if pnl.totals.total_profit >= 0 %}#16a34a{% else %}#dc2626{% endif %};">
+        {% if pnl.totals.total_profit >= 0 %}+{% endif %}${{ pnl.totals.total_profit|floatformat:0 }}
+      </div>
+      <div class="sum-lbl">Gross Profit (6mo)</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+  <!-- Bar chart -->
+  <div class="section-card">
+    <div class="sc-header">
+      <h3><i class="bi bi-bar-chart text-primary"></i> Monthly Breakdown</h3>
+    </div>
+    <div class="sc-body">
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div>Revenue</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f87171;"></div>Cost</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22c55e;"></div>Profit</div>
+      </div>
+
+      {% with max_val=pnl.monthly.0.revenue %}
+      <div class="chart-wrap" id="chartWrap">
+        {% for m in pnl.monthly %}
+        <div class="bar-group">
+          <div class="bar-pair">
+            <div class="bar revenue" style="width:14px;height:0;" data-val="{{ m.revenue }}" data-max="{{ max_val }}"></div>
+            <div class="bar cost"    style="width:14px;height:0;" data-val="{{ m.cost }}"    data-max="{{ max_val }}"></div>
+            <div class="bar profit {% if m.profit < 0 %}negative{% endif %}" style="width:14px;height:0;{% if m.profit < 0 %}background:#f87171;{% endif %}" data-val="{{ m.profit|floatformat:0 }}" data-max="{{ max_val }}"></div>
+          </div>
+          <div class="bar-label">{{ m.label|slice:":3" }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endwith %}
+
+      <!-- Monthly table -->
+      <table class="month-table" style="margin-top:8px;">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Revenue</th>
+            <th>Cost</th>
+            <th>Profit</th>
+            <th>Txns</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in pnl.monthly %}
+          <tr>
+            <td>{{ m.label }}</td>
+            <td>${{ m.revenue|floatformat:0 }}</td>
+            <td>${{ m.cost|floatformat:0 }}</td>
+            <td class="{% if m.profit >= 0 %}profit-pos{% else %}profit-neg{% endif %}">
+              {% if m.profit >= 0 %}+{% endif %}${{ m.profit|floatformat:0 }}
+            </td>
+            <td style="color:#9ca3af;">{{ m.transactions }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Top products -->
+  <div class="section-card">
+    <div class="sc-header">
+      <h3><i class="bi bi-trophy text-warning"></i> Top Products by Revenue</h3>
+    </div>
+    <div class="sc-body">
+      {% if pnl.top_products %}
+        {% with max_rev=pnl.top_products.0.revenue %}
+        {% for p in pnl.top_products %}
+        <div class="product-row">
+          <div class="product-rank {% if forloop.counter <= 3 %}top3{% endif %}">{{ forloop.counter }}</div>
+          <div class="product-bar-wrap">
+            <div class="product-name-row">
+              <span>{{ p.name }}</span>
+              <span>${{ p.revenue|floatformat:0 }}</span>
+            </div>
+            <div class="product-bar-bg">
+              {% if max_rev and max_rev > 0 %}
+              <div class="product-bar-fill" style="width:{% widthratio p.revenue max_rev 100 %}%"></div>
+              {% endif %}
+            </div>
+            <div class="product-units">{{ p.units_sold }} units sold &middot; {{ p.category }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% endwith %}
+      {% else %}
+        <p style="font-size:13px;color:#9ca3af;text-align:center;padding:20px 0;">No sales data yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Animate bar chart
+  document.addEventListener('DOMContentLoaded', () => {
+    const maxHeight = 140;
+    const bars = document.querySelectorAll('.bar[data-val]');
+    // Find global max across all bars
+    let globalMax = 0;
+    bars.forEach(b => { const v = Math.abs(parseFloat(b.dataset.val)||0); if(v>globalMax) globalMax=v; });
+    if (!globalMax) return;
+
+    setTimeout(() => {
+      bars.forEach(bar => {
+        const val = Math.abs(parseFloat(bar.dataset.val) || 0);
+        const h = Math.max(2, (val / globalMax) * maxHeight);
+        bar.style.height = h + 'px';
+      });
+    }, 100);
+  });
+</script>
+{% endblock %}

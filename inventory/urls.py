@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, ai_views
 
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
@@ -23,6 +23,15 @@ urlpatterns = [
     path('transactions/create/', views.TransactionCreateView.as_view(), name='transaction_create'),
     path('transactions/validate-stock/', views.validate_stock, name='validate_stock'),
     
-    # Other URLs
+    # Reports URLs
     path('reports/', views.reports, name='reports'),
+    path('reports/export/csv/', views.export_csv, name='export_csv'),
+    path('reports/export/pdf/', views.export_pdf, name='export_pdf'),
+
+    # AI & P&L URLs
+    path('ai/', ai_views.ai_insights, name='ai_insights'),
+    path('ai/data/', ai_views.ai_insights_data, name='ai_insights_data'),
+    path('pnl/', ai_views.pnl_dashboard, name='pnl'),
+    path('ai/chat/', ai_views.ai_chat, name='ai_chat'),
+    path('ai/refresh/', ai_views.refresh_insights, name='ai_refresh'),
 ]

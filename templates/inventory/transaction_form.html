@@ -2,137 +2,400 @@
 
 {% block title %}{{ form_title }} - Inventory Management System{% endblock %}
 
+{% block extra_css %}
+<style>
+  .form-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 20px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  @media (max-width: 768px) {
+    .form-layout { grid-template-columns: 1fr; }
+    .form-sidebar { order: -1; }
+  }
+
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 500; color: #6b7280;
+    text-decoration: none; margin-bottom: 16px;
+    transition: color .15s;
+  }
+  .back-link:hover { color: #111827; }
+
+  /* Card */
+  .form-card {
+    background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 14px; overflow: hidden;
+  }
+  .form-card-header {
+    padding: 18px 24px; border-bottom: 1px solid #f3f4f6;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .form-card-icon {
+    width: 38px; height: 38px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .icon-purchase { background: #dcfce7; color: #16a34a; }
+  .icon-sale     { background: #dbeafe; color: #1d4ed8; }
+  .icon-default  { background: #eff6ff; color: #1d4ed8; }
+
+  .form-card-header h2 { font-size: 15px; font-weight: 700; color: #111827; margin: 0; }
+  .form-card-header p  { font-size: 12px; color: #6b7280; margin: 2px 0 0; }
+  .form-card-body { padding: 24px; }
+  .form-card-footer {
+    padding: 14px 24px; border-top: 1px solid #f3f4f6;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+
+  /* Fields */
+  .field-label {
+    font-size: 11.5px; font-weight: 600; color: #374151;
+    text-transform: uppercase; letter-spacing: .4px;
+    margin-bottom: 6px; display: block;
+  }
+  .field-label .req { color: #dc2626; margin-left: 2px; }
+  .field-hint  { font-size: 12px; color: #9ca3af; margin-top: 5px; }
+  .field-error { font-size: 12px; color: #dc2626; margin-top: 5px; display: flex; align-items: center; gap: 4px; }
+
+  .form-control, .form-select {
+    border: 1.5px solid #e5e7eb; border-radius: 8px;
+    font-size: 13.5px; color: #111827; background: #f9fafb;
+    padding: 9px 13px; transition: all .15s; width: 100%;
+  }
+  .form-control:focus, .form-select:focus {
+    border-color: #1d4ed8; background: #fff;
+    box-shadow: 0 0 0 3px rgba(29,78,216,.08); outline: none;
+  }
+
+  /* Type toggle */
+  .type-toggle { display: flex; gap: 8px; }
+  .type-btn {
+    flex: 1; padding: 10px 12px;
+    border: 1.5px solid #e5e7eb; border-radius: 8px;
+    background: #f9fafb; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 500; color: #374151;
+    transition: all .15s;
+  }
+  .type-btn:hover { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+  .type-btn.active-purchase { border-color: #22c55e; background: #f0fdf4; color: #16a34a; }
+  .type-btn.active-sale     { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+  .type-btn .type-icon {
+    width: 28px; height: 28px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .type-btn.active-purchase .type-icon { background: #dcfce7; color: #16a34a; }
+  .type-btn.active-sale     .type-icon { background: #dbeafe; color: #1d4ed8; }
+  .type-btn:not(.active-purchase):not(.active-sale) .type-icon { background: #f3f4f6; color: #9ca3af; }
+
+  /* Input with suffix */
+  .input-wrap { position: relative; }
+  .input-suffix {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 12px; font-weight: 500; color: #9ca3af; pointer-events: none;
+  }
+  .has-suffix .form-control { padding-right: 48px; }
+
+  /* Validation feedback */
+  .validation-box {
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 13px; display: flex; align-items: center; gap: 8px;
+    margin-top: 8px;
+  }
+  .validation-box.valid   { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+  .validation-box.invalid { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+
+  /* Error banner */
+  .error-banner {
+    background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;
+    padding: 10px 14px; font-size: 13px; color: #dc2626;
+    margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+  }
+
+  /* Buttons */
+  .btn-cancel {
+    height: 38px; padding: 0 16px; font-size: 13px; font-weight: 500;
+    border-radius: 8px; border: 1.5px solid #e5e7eb; background: #fff; color: #374151;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    transition: all .15s;
+  }
+  .btn-cancel:hover { background: #f3f4f6; color: #111827; }
+  .btn-submit {
+    height: 38px; padding: 0 20px; font-size: 13px; font-weight: 600;
+    border-radius: 8px; background: #1d4ed8; color: #fff; border: none;
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-submit:hover:not(:disabled) { background: #1648c0; }
+  .btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Sidebar */
+  .info-card {
+    background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 12px; overflow: hidden; margin-bottom: 14px;
+  }
+  .info-card:last-child { margin-bottom: 0; }
+  .info-card-header {
+    padding: 12px 16px; border-bottom: 1px solid #f3f4f6;
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: #6b7280;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .info-card-body { padding: 14px 16px; }
+
+  .stock-stat { text-align: center; padding: 12px 0; }
+  .stock-stat-val { font-size: 28px; font-weight: 700; color: #111827; line-height: 1; }
+  .stock-stat-lbl { font-size: 11px; color: #9ca3af; margin-top: 4px; text-transform: uppercase; letter-spacing: .4px; }
+
+  .stock-bar-bg { height: 6px; background: #f3f4f6; border-radius: 99px; overflow: hidden; margin: 10px 0 6px; }
+  .stock-bar-fill { height: 100%; border-radius: 99px; transition: width .3s; }
+  .stock-bar-fill.good { background: #22c55e; }
+  .stock-bar-fill.low  { background: #f59e0b; }
+  .stock-bar-fill.out  { background: #ef4444; }
+
+  .stock-meta { font-size: 11.5px; color: #6b7280; display: flex; justify-content: space-between; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h2 class="mb-0">{{ form_title }}</h2>
-            </div>
-            <div class="card-body">
-                <form method="post" novalidate id="transaction-form">
-                    {% csrf_token %}
-                    
-                    {% if form.non_field_errors %}
-                    <div class="alert alert-danger">
-                        {{ form.non_field_errors }}
-                    </div>
-                    {% endif %}
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.product.id_for_label }}" class="form-label">
-                            Product <span class="text-danger">*</span>
-                        </label>
-                        {{ form.product }}
-                        {% if form.product.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.product.errors }}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.transaction_type.id_for_label }}" class="form-label">
-                            Transaction Type <span class="text-danger">*</span>
-                        </label>
-                        {{ form.transaction_type }}
-                        {% if form.transaction_type.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.transaction_type.errors }}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.quantity_change.id_for_label }}" class="form-label">
-                            Quantity <span class="text-danger">*</span>
-                        </label>
-                        {{ form.quantity_change }}
-                        {% if form.quantity_change.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.quantity_change.errors }}
-                        </div>
-                        {% endif %}
-                        {% if form.quantity_change.help_text %}
-                        <small class="form-text text-muted">{{ form.quantity_change.help_text }}</small>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Real-time validation feedback -->
-                    <div id="stock-validation" class="mb-3" style="display: none;">
-                        <div class="alert" role="alert" id="validation-message"></div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between mt-4">
-                        <a href="{% url 'transaction_history' %}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary" id="submit-btn">{{ submit_text }}</button>
-                    </div>
-                </form>
-            </div>
+
+<a href="{% url 'transaction_history' %}" class="back-link">
+  <i class="bi bi-arrow-left"></i> Back to Transactions
+</a>
+
+<div class="form-layout">
+
+  <!-- ── Main form ── -->
+  <div>
+    <form method="post" novalidate id="transaction-form">
+      {% csrf_token %}
+
+      <div class="form-card">
+        <div class="form-card-header">
+          <div class="form-card-icon icon-default" id="header-icon">
+            <i class="bi bi-arrow-left-right"></i>
+          </div>
+          <div>
+            <h2>{{ form_title }}</h2>
+            <p>Record a stock purchase or sale transaction.</p>
+          </div>
         </div>
+
+        <div class="form-card-body">
+
+          {% if form.non_field_errors %}
+          <div class="error-banner">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            {{ form.non_field_errors.0 }}
+          </div>
+          {% endif %}
+
+          <!-- Product -->
+          <div class="mb-4">
+            <label for="{{ form.product.id_for_label }}" class="field-label">
+              Product <span class="req">*</span>
+            </label>
+            {{ form.product }}
+            {% if form.product.errors %}
+            <div class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.product.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Transaction type — visual toggle -->
+          <div class="mb-4">
+            <label class="field-label">Transaction Type <span class="req">*</span></label>
+            <div class="type-toggle" id="type-toggle">
+              <button type="button" class="type-btn" data-value="purchase" id="btn-purchase">
+                <div class="type-icon"><i class="bi bi-arrow-down-circle"></i></div>
+                <div>
+                  <div style="font-weight:600;">Purchase</div>
+                  <div style="font-size:11px;opacity:.7;">Add stock</div>
+                </div>
+              </button>
+              <button type="button" class="type-btn" data-value="sale" id="btn-sale">
+                <div class="type-icon"><i class="bi bi-arrow-up-circle"></i></div>
+                <div>
+                  <div style="font-weight:600;">Sale</div>
+                  <div style="font-size:11px;opacity:.7;">Remove stock</div>
+                </div>
+              </button>
+            </div>
+            <!-- Hidden select for form submission -->
+            <div style="display:none;">{{ form.transaction_type }}</div>
+            {% if form.transaction_type.errors %}
+            <div class="field-error mt-2"><i class="bi bi-exclamation-circle"></i> {{ form.transaction_type.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Quantity -->
+          <div class="mb-2">
+            <label for="{{ form.quantity_change.id_for_label }}" class="field-label">
+              Quantity <span class="req">*</span>
+            </label>
+            <div class="input-wrap has-suffix">
+              {{ form.quantity_change }}
+              <span class="input-suffix">units</span>
+            </div>
+            {% if form.quantity_change.errors %}
+            <div class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.quantity_change.errors.0 }}</div>
+            {% endif %}
+
+            <!-- Real-time validation feedback -->
+            <div id="stock-validation" style="display:none;"></div>
+          </div>
+
+        </div>
+
+        <div class="form-card-footer">
+          <a href="{% url 'transaction_history' %}" class="btn-cancel">
+            <i class="bi bi-x"></i> Cancel
+          </a>
+          <button type="submit" class="btn-submit" id="submit-btn">
+            <i class="bi bi-check-lg"></i> {{ submit_text }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Sidebar ── -->
+  <div class="form-sidebar">
+
+    <!-- Stock level card -->
+    <div class="info-card" id="stock-card">
+      <div class="info-card-header">
+        <i class="bi bi-bar-chart"></i> Current Stock
+      </div>
+      <div class="info-card-body" id="stock-info">
+        <div class="stock-stat">
+          <div class="stock-stat-val" id="stock-qty">—</div>
+          <div class="stock-stat-lbl">units available</div>
+        </div>
+        <div class="stock-bar-bg">
+          <div class="stock-bar-fill good" id="stock-bar" style="width:0%"></div>
+        </div>
+        <div class="stock-meta">
+          <span id="stock-status-label" style="color:#9ca3af;">Select a product</span>
+          <span id="stock-threshold-label"></span>
+        </div>
+      </div>
     </div>
+
+    <!-- Tips -->
+    <div class="info-card">
+      <div class="info-card-header">
+        <i class="bi bi-lightbulb"></i> Tips
+      </div>
+      <div class="info-card-body">
+        <div style="font-size:12.5px;color:#374151;line-height:1.6;">
+          <p style="margin-bottom:8px;"><strong>Purchase</strong> — increases stock. Use when receiving new inventory.</p>
+          <p style="margin-bottom:8px;"><strong>Sale</strong> — decreases stock. Cannot exceed available quantity.</p>
+          <p style="margin:0;">All transactions are logged and cannot be deleted.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
 <script>
-// Real-time stock validation with HTMX-like behavior
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('transaction-form');
-    const productSelect = document.getElementById('{{ form.product.id_for_label }}');
-    const transactionTypeSelect = document.getElementById('{{ form.transaction_type.id_for_label }}');
-    const quantityInput = document.getElementById('{{ form.quantity_change.id_for_label }}');
-    const validationDiv = document.getElementById('stock-validation');
-    const validationMessage = document.getElementById('validation-message');
-    const submitBtn = document.getElementById('submit-btn');
-    
-    function validateStock() {
-        const productId = productSelect.value;
-        const transactionType = transactionTypeSelect.value;
-        const quantity = quantityInput.value;
-        
-        if (!productId || !transactionType || !quantity) {
-            validationDiv.style.display = 'none';
-            return;
+document.addEventListener('DOMContentLoaded', function () {
+  const productSelect  = document.getElementById('{{ form.product.id_for_label }}');
+  const typeSelect     = document.getElementById('{{ form.transaction_type.id_for_label }}');
+  const qtyInput       = document.getElementById('{{ form.quantity_change.id_for_label }}');
+  const validationDiv  = document.getElementById('stock-validation');
+  const submitBtn      = document.getElementById('submit-btn');
+  const btnPurchase    = document.getElementById('btn-purchase');
+  const btnSale        = document.getElementById('btn-sale');
+  const headerIcon     = document.getElementById('header-icon');
+
+  // ── Type toggle ──
+  function setType(val) {
+    typeSelect.value = val;
+    btnPurchase.className = 'type-btn' + (val === 'purchase' ? ' active-purchase' : '');
+    btnSale.className     = 'type-btn' + (val === 'sale'     ? ' active-sale'     : '');
+    headerIcon.className  = 'form-card-icon ' + (val === 'purchase' ? 'icon-purchase' : val === 'sale' ? 'icon-sale' : 'icon-default');
+    headerIcon.innerHTML  = val === 'purchase'
+      ? '<i class="bi bi-arrow-down-circle"></i>'
+      : val === 'sale'
+      ? '<i class="bi bi-arrow-up-circle"></i>'
+      : '<i class="bi bi-arrow-left-right"></i>';
+    validateStock();
+  }
+
+  btnPurchase.addEventListener('click', () => setType('purchase'));
+  btnSale.addEventListener('click',     () => setType('sale'));
+
+  // Sync if form has a pre-selected value (e.g. validation error re-render)
+  if (typeSelect.value) setType(typeSelect.value);
+
+  // ── Stock validation ──
+  let debounceTimer;
+  function validateStock() {
+    const productId = productSelect.value;
+    const txType    = typeSelect.value;
+    const qty       = qtyInput.value;
+
+    // Update sidebar stock info whenever product changes
+    if (productId) fetchStockInfo(productId, txType, qty);
+
+    if (!productId || !txType || !qty) {
+      validationDiv.style.display = 'none';
+      submitBtn.disabled = false;
+      return;
+    }
+
+    fetch(`{% url 'validate_stock' %}?product_id=${productId}&quantity=${qty}&transaction_type=${txType}`)
+      .then(r => r.json())
+      .then(data => {
+        validationDiv.style.display = 'block';
+        validationDiv.innerHTML = `
+          <div class="validation-box ${data.valid ? 'valid' : 'invalid'}">
+            <i class="bi bi-${data.valid ? 'check-circle-fill' : 'exclamation-circle-fill'}"></i>
+            ${data.message}
+          </div>`;
+        submitBtn.disabled = !data.valid;
+      })
+      .catch(() => {
+        validationDiv.style.display = 'none';
+        submitBtn.disabled = false;
+      });
+  }
+
+  function fetchStockInfo(productId, txType, qty) {
+    fetch(`{% url 'validate_stock' %}?product_id=${productId}&quantity=${qty || 1}&transaction_type=${txType || 'purchase'}`)
+      .then(r => r.json())
+      .then(data => {
+        const stock = data.current_stock ?? null;
+        const qtyEl = document.getElementById('stock-qty');
+        const barEl = document.getElementById('stock-bar');
+        const lblEl = document.getElementById('stock-status-label');
+
+        if (stock !== null) {
+          qtyEl.textContent = stock;
+          // Simple bar: cap at 100 units for visual
+          const pct = Math.min(100, (stock / Math.max(stock, 20)) * 100);
+          barEl.style.width = pct + '%';
+          barEl.className = 'stock-bar-fill ' + (stock === 0 ? 'out' : stock < 5 ? 'low' : 'good');
+          lblEl.textContent = stock === 0 ? 'Out of stock' : stock < 5 ? 'Low stock' : 'In stock';
+          lblEl.style.color = stock === 0 ? '#dc2626' : stock < 5 ? '#d97706' : '#16a34a';
         }
-        
-        // Make AJAX request to validate stock
-        fetch(`{% url 'validate_stock' %}?product_id=${productId}&quantity=${quantity}&transaction_type=${transactionType}`)
-            .then(response => response.json())
-            .then(data => {
-                validationDiv.style.display = 'block';
-                validationMessage.textContent = data.message;
-                
-                if (data.valid) {
-                    validationMessage.className = 'alert alert-success';
-                    submitBtn.disabled = false;
-                } else {
-                    validationMessage.className = 'alert alert-danger';
-                    submitBtn.disabled = true;
-                }
-            })
-            .catch(error => {
-                console.error('Validation error:', error);
-                validationDiv.style.display = 'none';
-                submitBtn.disabled = false;
-            });
-    }
-    
-    // Add event listeners for real-time validation
-    productSelect.addEventListener('change', validateStock);
-    transactionTypeSelect.addEventListener('change', validateStock);
-    quantityInput.addEventListener('input', debounce(validateStock, 500));
-    
-    // Debounce function to avoid too many requests
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
+      })
+      .catch(() => {});
+  }
+
+  productSelect.addEventListener('change', validateStock);
+  typeSelect.addEventListener('change', validateStock);
+  qtyInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(validateStock, 400);
+  });
 });
 </script>
 {% endblock %}
