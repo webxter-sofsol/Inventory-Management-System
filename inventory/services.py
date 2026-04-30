@@ -124,28 +124,23 @@ class ProductService:
     
     def search_products(
         self,
+        user=None,
         query: Optional[str] = None,
         category: Optional[str] = None,
         stock_status: Optional[str] = None
     ) -> QuerySet:
         """
-        Search and filter products.
-        
-        Args:
-            query: Search query for name (case-insensitive)
-            category: Filter by category name
-            stock_status: Filter by stock status ('in-stock', 'low-stock', 'out-of-stock')
-        
-        Returns:
-            QuerySet of matching products
+        Search and filter products scoped to a specific user.
         """
         products = Product.objects.all()
-        
+
+        # Scope to user
+        if user is not None:
+            products = products.filter(user=user)
+
         # Filter by search query (name)
         if query:
-            products = products.filter(
-                Q(name__icontains=query)
-            )
+            products = products.filter(Q(name__icontains=query))
         
         # Filter by category
         if category:
@@ -156,16 +151,12 @@ class ProductService:
             if stock_status == 'out-of-stock':
                 products = products.filter(quantity=0)
             elif stock_status == 'low-stock':
-                # Low stock: quantity > 0 AND quantity < alert_threshold
                 products = products.filter(
                     quantity__gt=0,
                     quantity__lt=F('alert_threshold')
                 )
             elif stock_status == 'in-stock':
-                # In stock: quantity >= alert_threshold
-                products = products.filter(
-                    quantity__gte=F('alert_threshold')
-                )
+                products = products.filter(quantity__gte=F('alert_threshold'))
         
         return products
     
@@ -383,45 +374,35 @@ class TransactionService:
     
     def get_transaction_history(
         self,
+        user=None,
         product_id: Optional[int] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
         transaction_type: Optional[str] = None
     ) -> QuerySet:
         """
-        Retrieve filtered transaction history.
-        
-        Args:
-            product_id: Filter by product ID (optional)
-            start_date: Filter by start date (inclusive, optional)
-            end_date: Filter by end date (inclusive, optional)
-            transaction_type: Filter by type ('purchase' or 'sale', optional)
-        
-        Returns:
-            QuerySet of StockTransaction instances ordered by timestamp descending
+        Retrieve filtered transaction history scoped to a user.
         """
         transactions = StockTransaction.objects.all()
-        
-        # Filter by product
+
+        # Scope to user's products
+        if user is not None:
+            transactions = transactions.filter(product__user=user)
+
         if product_id is not None:
             transactions = transactions.filter(product_id=product_id)
         
-        # Filter by date range
         if start_date is not None:
             transactions = transactions.filter(timestamp__date__gte=start_date)
         
         if end_date is not None:
             transactions = transactions.filter(timestamp__date__lte=end_date)
         
-        # Filter by transaction type
         if transaction_type is not None:
             if transaction_type not in ['purchase', 'sale']:
-                raise ValidationError(
-                    "Transaction type must be 'purchase' or 'sale'"
-                )
+                raise ValidationError("Transaction type must be 'purchase' or 'sale'")
             transactions = transactions.filter(transaction_type=transaction_type)
         
-        # Results are already ordered by -timestamp due to model Meta.ordering
         return transactions
 
 

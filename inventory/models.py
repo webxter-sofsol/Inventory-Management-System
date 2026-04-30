@@ -6,19 +6,35 @@ from decimal import Decimal
 
 class Category(models.Model):
     """Product category"""
-    name = models.CharField(max_length=100, unique=True, db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='categories',
+        null=True,   # null during migration for existing rows
+        blank=True,
+    )
+    name = models.CharField(max_length=100, db_index=True)
     description = models.TextField(blank=True)
-    
+
     class Meta:
         db_table = 'categories'
         verbose_name_plural = 'categories'
-    
+        # name is unique per user, not globally
+        unique_together = [('user', 'name')]
+
     def __str__(self):
         return self.name
 
 
 class Product(models.Model):
     """Inventory product"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='products',
+        null=True,   # null during migration for existing rows
+        blank=True,
+    )
     name = models.CharField(max_length=200, db_index=True)
     quantity = models.IntegerField(
         validators=[MinValueValidator(0)],

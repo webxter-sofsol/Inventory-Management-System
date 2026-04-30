@@ -16,14 +16,26 @@ def _get_client():
     return OpenAI(api_key=settings.OPENAI_API_KEY)
 
 
-def _build_inventory_snapshot() -> dict:
+def _build_inventory_snapshot(user=None) -> dict:
     """Collect a compact snapshot of current inventory state for the AI prompt."""
     from django.db.models import Sum, Count, F, Q
     from .models import Product, StockTransaction, LowStockAlert, Category
 
+    # Base querysets scoped to user
+    product_qs = Product.objects.select_related('category')
+    tx_qs = StockTransaction.objects.all()
+    alert_qs = LowStockAlert.objects.filter(is_active=True)
+    category_qs = Category.objects.all()
+
+    if user is not None:
+        product_qs = product_qs.filter(user=user)
+        tx_qs = tx_qs.filter(product__user=user)
+        alert_qs = alert_qs.filter(product__user=user)
+        category_qs = category_qs.filter(user=user)
+
     # Products
     products = list(
-        Product.objects.select_related('category').values(
+        product_qs.values(
             'id', 'name', 'quantity', 'price', 'alert_threshold',
             'category__name', 'created_at',
         )
@@ -36,7 +48,7 @@ def _build_inventory_snapshot() -> dict:
     # Transaction summary (last 90 days)
     since = timezone.now() - timezone.timedelta(days=90)
     tx_summary = (
-        StockTransaction.objects
+        tx_qs
         .filter(timestamp__gte=since)
         .values('product__name', 'transaction_type')
         .annotate(total_qty=Sum('quantity_change'), count=Count('id'))
@@ -44,32 +56,20 @@ def _build_inventory_snapshot() -> dict:
     )
 
     # Revenue & cost estimates
-    sales = (
-        StockTransaction.objects
-        .filter(transaction_type='sale', timestamp__gte=since)
-        .select_related('product')
-    )
-    total_revenue = sum(
-        abs(tx.quantity_change) * tx.product.price for tx in sales
-    )
+    sales = tx_qs.filter(transaction_type='sale', timestamp__gte=since).select_related('product')
+    total_revenue = sum(abs(tx.quantity_change) * tx.product.price for tx in sales)
 
-    purchases = (
-        StockTransaction.objects
-        .filter(transaction_type='purchase', timestamp__gte=since)
-        .select_related('product')
-    )
-    total_cost = sum(
-        tx.quantity_change * tx.product.price for tx in purchases
-    )
+    purchases = tx_qs.filter(transaction_type='purchase', timestamp__gte=since).select_related('product')
+    total_cost = sum(tx.quantity_change * tx.product.price for tx in purchases)
 
     low_stock = list(
-        LowStockAlert.objects.filter(is_active=True)
+        alert_qs
         .select_related('product', 'product__category')
         .values('product__name', 'product__quantity', 'product__alert_threshold', 'product__price')
     )
 
     categories = list(
-        Category.objects.annotate(
+        category_qs.annotate(
             product_count=Count('products'),
             total_qty=Sum('products__quantity'),
             total_value=Sum(F('products__quantity') * F('products__price')),
@@ -111,7 +111,7 @@ def _log_interaction(service_name: str, request_data: dict, response_data: dict)
         logger.warning(f"Failed to log AI interaction: {e}")
 
 
-def get_ai_insights() -> dict:
+def get_ai_insights(user=None) -> dict:
     """
     Ask OpenAI for a structured analysis of the current inventory.
     Returns a dict with keys: summary, recommendations, alerts, predictions.
@@ -119,7 +119,7 @@ def get_ai_insights() -> dict:
     if not settings.OPENAI_API_KEY:
         return _fallback_response("OpenAI API key not configured.")
 
-    snapshot = _build_inventory_snapshot()
+    snapshot = _build_inventory_snapshot(user=user)
 
     system_prompt = """You are an expert inventory management consultant and financial analyst.
 You analyse inventory data and provide concise, actionable business insights.
@@ -188,7 +188,7 @@ Focus on:
         return _fallback_response(str(e))
 
 
-def get_pnl_analysis() -> dict:
+def get_pnl_analysis(user=None) -> dict:
     """
     Returns computed P&L data (no AI needed) plus AI commentary.
     """
@@ -208,12 +208,12 @@ def get_pnl_analysis() -> dict:
         start = timezone.datetime(year, month, 1, tzinfo=timezone.utc)
         end = timezone.datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
 
-        sales_qs = StockTransaction.objects.filter(
-            transaction_type='sale', timestamp__range=(start, end)
-        ).select_related('product')
-        purchases_qs = StockTransaction.objects.filter(
-            transaction_type='purchase', timestamp__range=(start, end)
-        ).select_related('product')
+        base_qs = StockTransaction.objects.filter(timestamp__range=(start, end))
+        if user is not None:
+            base_qs = base_qs.filter(product__user=user)
+
+        sales_qs = base_qs.filter(transaction_type='sale').select_related('product')
+        purchases_qs = base_qs.filter(transaction_type='purchase').select_related('product')
 
         revenue = sum(abs(tx.quantity_change) * tx.product.price for tx in sales_qs)
         cost = sum(tx.quantity_change * tx.product.price for tx in purchases_qs)
@@ -229,11 +229,10 @@ def get_pnl_analysis() -> dict:
 
     # Top products by revenue (90 days)
     since = now - timezone.timedelta(days=90)
-    sales = (
-        StockTransaction.objects
-        .filter(transaction_type='sale', timestamp__gte=since)
-        .select_related('product', 'product__category')
-    )
+    sales_base = StockTransaction.objects.filter(transaction_type='sale', timestamp__gte=since)
+    if user is not None:
+        sales_base = sales_base.filter(product__user=user)
+    sales = sales_base.select_related('product', 'product__category')
     product_revenue: dict = {}
     for tx in sales:
         key = tx.product.name
@@ -267,12 +266,12 @@ def get_pnl_analysis() -> dict:
     }
 
 
-def ask_ai_question(question: str) -> str:
+def ask_ai_question(question: str, user=None) -> str:
     """Free-form question about the inventory — returns a plain text answer."""
     if not settings.OPENAI_API_KEY:
         return "AI is not configured. Please add your OpenAI API key to the .env file."
 
-    snapshot = _build_inventory_snapshot()
+    snapshot = _build_inventory_snapshot(user=user)
 
     try:
         client = _get_client()

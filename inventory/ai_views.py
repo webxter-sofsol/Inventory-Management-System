@@ -17,7 +17,7 @@ def ai_insights_data(request):
     """JSON endpoint — called by the page after load. Does the OpenAI call."""
     from .ai_service import get_ai_insights
     try:
-        insights = get_ai_insights()
+        insights = get_ai_insights(user=request.user)
         return JsonResponse({'ok': True, 'insights': insights})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=500)
@@ -27,7 +27,7 @@ def ai_insights_data(request):
 def pnl_dashboard(request):
     """Profit & Loss dashboard — pure Python, no AI call, loads fast."""
     from .ai_service import get_pnl_analysis
-    pnl = get_pnl_analysis()
+    pnl = get_pnl_analysis(user=request.user)
     return render(request, 'inventory/pnl.html', {'pnl': pnl})
 
 
@@ -38,7 +38,7 @@ def ai_chat(request):
     if not question:
         return JsonResponse({'answer': 'Please ask a question.'})
     from .ai_service import ask_ai_question
-    answer = ask_ai_question(question)
+    answer = ask_ai_question(question, user=request.user)
     return JsonResponse({'answer': answer})
 
 

@@ -15,28 +15,32 @@ def dashboard(request):
     from django.db.models import Sum, Count, F
     from .models import LowStockAlert
 
-    total_products = Product.objects.count()
-    total_value = Product.objects.aggregate(
+    user = request.user
+
+    total_products = Product.objects.filter(user=user).count()
+    total_value = Product.objects.filter(user=user).aggregate(
         val=Sum(F('quantity') * F('price'))
     )['val'] or 0
 
-    out_of_stock = Product.objects.filter(quantity=0).count()
-    low_stock_alerts = LowStockAlert.objects.filter(is_active=True).select_related(
-        'product', 'product__category'
-    ).order_by('created_at')
+    out_of_stock = Product.objects.filter(user=user, quantity=0).count()
+    low_stock_alerts = LowStockAlert.objects.filter(
+        is_active=True, product__user=user
+    ).select_related('product', 'product__category').order_by('created_at')
     low_stock_count = low_stock_alerts.count()
 
-    recent_transactions = StockTransaction.objects.select_related(
-        'product', 'product__category', 'user'
-    ).order_by('-timestamp')[:10]
+    recent_transactions = StockTransaction.objects.filter(
+        product__user=user
+    ).select_related('product', 'product__category', 'user').order_by('-timestamp')[:10]
 
     # Category breakdown
-    categories = Category.objects.annotate(
+    categories = Category.objects.filter(user=user).annotate(
         product_count=Count('products'),
         total_qty=Sum('products__quantity'),
     ).order_by('-product_count')
 
-    out_of_stock_products = Product.objects.filter(quantity=0).select_related('category')[:8]
+    out_of_stock_products = Product.objects.filter(
+        user=user, quantity=0
+    ).select_related('category')[:8]
 
     context = {
         'total_products': total_products,
@@ -60,16 +64,13 @@ class ProductListView(LoginRequiredMixin, ListView):
     
     def get_queryset(self):
         """Get filtered product queryset"""
-        queryset = Product.objects.select_related('category').all()
-        
-        # Get filter parameters
         search_query = self.request.GET.get('search', '').strip()
         category_filter = self.request.GET.get('category', '').strip()
         stock_status_filter = self.request.GET.get('stock_status', '').strip()
         
-        # Use ProductService for filtering
         product_service = ProductService()
         queryset = product_service.search_products(
+            user=self.request.user,
             query=search_query if search_query else None,
             category=category_filter if category_filter else None,
             stock_status=stock_status_filter if stock_status_filter else None
@@ -80,15 +81,10 @@ class ProductListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         """Add additional context for filters"""
         context = super().get_context_data(**kwargs)
-        
-        # Add categories for filter dropdown
-        context['categories'] = Category.objects.all().order_by('name')
-        
-        # Preserve filter values in context
+        context['categories'] = Category.objects.filter(user=self.request.user).order_by('name')
         context['search_query'] = self.request.GET.get('search', '')
         context['category_filter'] = self.request.GET.get('category', '')
         context['stock_status_filter'] = self.request.GET.get('stock_status', '')
-        
         return context
 
 
@@ -105,8 +101,15 @@ class ProductCreateView(LoginRequiredMixin, CreateView):
     template_name = 'inventory/product_form.html'
     success_url = reverse_lazy('product_list_view')
     
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Limit category choices to the current user's categories
+        form.fields['category'].queryset = Category.objects.filter(user=self.request.user)
+        return form
+
     def form_valid(self, form):
-        """Handle successful form submission"""
+        """Assign the current user before saving"""
+        form.instance.user = self.request.user
         try:
             response = super().form_valid(form)
             messages.success(
@@ -115,14 +118,10 @@ class ProductCreateView(LoginRequiredMixin, CreateView):
             )
             return response
         except Exception as e:
-            messages.error(
-                self.request,
-                f'Error creating product: {str(e)}'
-            )
+            messages.error(self.request, f'Error creating product: {str(e)}')
             return self.form_invalid(form)
     
     def get_context_data(self, **kwargs):
-        """Add context for template"""
         context = super().get_context_data(**kwargs)
         context['form_title'] = 'Add New Product'
         context['submit_text'] = 'Create Product'
@@ -135,25 +134,25 @@ class ProductUpdateView(LoginRequiredMixin, UpdateView):
     form_class = ProductForm
     template_name = 'inventory/product_form.html'
     success_url = reverse_lazy('product_list_view')
-    
+
+    def get_queryset(self):
+        return Product.objects.filter(user=self.request.user)
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['category'].queryset = Category.objects.filter(user=self.request.user)
+        return form
+
     def form_valid(self, form):
-        """Handle successful form submission"""
         try:
             response = super().form_valid(form)
-            messages.success(
-                self.request,
-                f'Product "{self.object.name}" updated successfully.'
-            )
+            messages.success(self.request, f'Product "{self.object.name}" updated successfully.')
             return response
         except Exception as e:
-            messages.error(
-                self.request,
-                f'Error updating product: {str(e)}'
-            )
+            messages.error(self.request, f'Error updating product: {str(e)}')
             return self.form_invalid(form)
     
     def get_context_data(self, **kwargs):
-        """Add context for template"""
         context = super().get_context_data(**kwargs)
         context['form_title'] = f'Edit Product: {self.object.name}'
         context['submit_text'] = 'Update Product'
@@ -165,24 +164,19 @@ class ProductDeleteView(LoginRequiredMixin, DeleteView):
     model = Product
     template_name = 'inventory/product_confirm_delete.html'
     success_url = reverse_lazy('product_list_view')
-    
+
+    def get_queryset(self):
+        return Product.objects.filter(user=self.request.user)
+
     def delete(self, request, *args, **kwargs):
-        """Handle product deletion"""
         product = self.get_object()
         product_name = product.name
-        
         try:
             response = super().delete(request, *args, **kwargs)
-            messages.success(
-                request,
-                f'Product "{product_name}" deleted successfully.'
-            )
+            messages.success(request, f'Product "{product_name}" deleted successfully.')
             return response
         except Exception as e:
-            messages.error(
-                request,
-                f'Error deleting product: {str(e)}'
-            )
+            messages.error(request, f'Error deleting product: {str(e)}')
             return redirect('product_list_view')
 
 
@@ -197,8 +191,7 @@ def bulk_update_view(request):
             messages.error(request, 'No products selected.')
             return redirect('product_list_view')
         
-        # Render inline editing form
-        products = Product.objects.filter(id__in=product_ids)
+        products = Product.objects.filter(id__in=product_ids, user=request.user)
         return render(request, 'inventory/bulk_update_form.html', {
             'products': products,
             'operation': operation
@@ -265,18 +258,30 @@ class TransactionCreateView(LoginRequiredMixin, CreateView):
     form_class = TransactionForm
     template_name = 'inventory/transaction_form.html'
     success_url = reverse_lazy('transaction_history')
-    
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Only show the current user's products
+        form.fields['product'].queryset = Product.objects.filter(
+            user=self.request.user
+        ).order_by('name')
+        return form
+
     def form_valid(self, form):
-        """Handle successful form submission using TransactionService"""
         try:
             product = form.cleaned_data['product']
+            # Ensure the product belongs to the current user
+            if product.user != self.request.user:
+                messages.error(self.request, 'Invalid product selection.')
+                return self.form_invalid(form)
+
             transaction_type = form.cleaned_data['transaction_type']
             quantity = form.cleaned_data['quantity_change']
             
             transaction_service = TransactionService()
             
             if transaction_type == 'purchase':
-                transaction = transaction_service.record_purchase(
+                transaction_service.record_purchase(
                     product_id=product.id,
                     quantity=quantity,
                     user_id=self.request.user.id
@@ -285,8 +290,8 @@ class TransactionCreateView(LoginRequiredMixin, CreateView):
                     self.request,
                     f'Purchase recorded: {quantity} units of {product.name} added to inventory.'
                 )
-            else:  # sale
-                transaction = transaction_service.record_sale(
+            else:
+                transaction_service.record_sale(
                     product_id=product.id,
                     quantity=quantity,
                     user_id=self.request.user.id
@@ -299,14 +304,10 @@ class TransactionCreateView(LoginRequiredMixin, CreateView):
             return redirect(self.success_url)
             
         except Exception as e:
-            messages.error(
-                self.request,
-                f'Error recording transaction: {str(e)}'
-            )
+            messages.error(self.request, f'Error recording transaction: {str(e)}')
             return self.form_invalid(form)
     
     def get_context_data(self, **kwargs):
-        """Add context for template"""
         context = super().get_context_data(**kwargs)
         context['form_title'] = 'Record Transaction'
         context['submit_text'] = 'Record Transaction'
@@ -324,14 +325,11 @@ def validate_stock(request):
         return JsonResponse({'valid': False, 'message': 'Missing parameters'})
     
     try:
-        product = Product.objects.get(id=product_id)
+        product = Product.objects.get(id=product_id, user=request.user)
         quantity = int(quantity)
         
         if quantity <= 0:
-            return JsonResponse({
-                'valid': False,
-                'message': 'Quantity must be positive'
-            })
+            return JsonResponse({'valid': False, 'message': 'Quantity must be positive'})
         
         if transaction_type == 'sale':
             if product.quantity < quantity:
@@ -362,16 +360,13 @@ class TransactionHistoryView(LoginRequiredMixin, ListView):
     paginate_by = 50
     
     def get_queryset(self):
-        """Get filtered transaction queryset"""
         transaction_service = TransactionService()
         
-        # Get filter parameters
         product_id = self.request.GET.get('product')
         transaction_type = self.request.GET.get('transaction_type')
         start_date_str = self.request.GET.get('start_date')
         end_date_str = self.request.GET.get('end_date')
         
-        # Parse dates
         start_date = None
         end_date = None
         
@@ -387,30 +382,23 @@ class TransactionHistoryView(LoginRequiredMixin, ListView):
             except ValueError:
                 pass
         
-        # Use TransactionService for filtering
         queryset = transaction_service.get_transaction_history(
+            user=self.request.user,
             product_id=int(product_id) if product_id else None,
             start_date=start_date,
             end_date=end_date,
             transaction_type=transaction_type if transaction_type else None
         )
         
-        # Prefetch related data for performance
         return queryset.select_related('product', 'product__category', 'user')
     
     def get_context_data(self, **kwargs):
-        """Add additional context for filters"""
         context = super().get_context_data(**kwargs)
-        
-        # Add products for filter dropdown
-        context['products'] = Product.objects.all().order_by('name')
-        
-        # Preserve filter values in context
+        context['products'] = Product.objects.filter(user=self.request.user).order_by('name')
         context['product_filter'] = self.request.GET.get('product', '')
         context['transaction_type_filter'] = self.request.GET.get('transaction_type', '')
         context['start_date_filter'] = self.request.GET.get('start_date', '')
         context['end_date_filter'] = self.request.GET.get('end_date', '')
-        
         return context
 
 
@@ -420,16 +408,16 @@ def reports(request):
     from django.db.models import Sum, Count, F, Q
     from .models import LowStockAlert
 
+    user = request.user
     category_filter = request.GET.get('category', '').strip()
 
-    products = Product.objects.select_related('category').annotate(
+    products = Product.objects.filter(user=user).select_related('category').annotate(
         report_total_value=F('quantity') * F('price')
     )
     if category_filter:
         products = products.filter(category__name=category_filter)
     products = products.order_by('category__name', 'name')
 
-    # Summary stats
     summary = products.aggregate(
         total_products=Count('id'),
         total_units=Sum('quantity'),
@@ -439,7 +427,7 @@ def reports(request):
     low_stock_count = products.filter(quantity__lt=F('alert_threshold')).count()
     out_of_stock_count = products.filter(quantity=0).count()
 
-    categories = Category.objects.all().order_by('name')
+    categories = Category.objects.filter(user=user).order_by('name')
 
     context = {
         'products': products,
@@ -461,7 +449,7 @@ def export_csv(request):
 
     category_filter = request.GET.get('category', '').strip()
 
-    products = Product.objects.select_related('category').order_by('category__name', 'name')
+    products = Product.objects.filter(user=request.user).select_related('category').order_by('category__name', 'name')
     if category_filter:
         products = products.filter(category__name=category_filter)
 
@@ -503,7 +491,7 @@ def export_pdf(request):
 
     category_filter = request.GET.get('category', '').strip()
 
-    products = Product.objects.select_related('category').order_by('category__name', 'name')
+    products = Product.objects.filter(user=request.user).select_related('category').order_by('category__name', 'name')
     if category_filter:
         products = products.filter(category__name=category_filter)
 
@@ -605,9 +593,8 @@ class CategoryListView(LoginRequiredMixin, ListView):
     paginate_by = 20
     
     def get_queryset(self):
-        """Get categories with product counts and total values"""
         from django.db.models import Count, Sum, F
-        return Category.objects.annotate(
+        return Category.objects.filter(user=self.request.user).annotate(
             product_count=Count('products'),
             total_qty=Sum('products__quantity'),
             total_value=Sum(F('products__quantity') * F('products__price')),
@@ -622,30 +609,22 @@ class CategoryCreateView(LoginRequiredMixin, CreateView):
     fields = ['name', 'description']
     
     def get_form(self, form_class=None):
-        """Customize form widgets"""
         form = super().get_form(form_class)
         form.fields['name'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Enter category name'})
         form.fields['description'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Enter description (optional)', 'rows': 3})
         return form
     
     def form_valid(self, form):
-        """Handle successful form submission"""
+        form.instance.user = self.request.user
         try:
             response = super().form_valid(form)
-            messages.success(
-                self.request,
-                f'Category "{self.object.name}" created successfully.'
-            )
+            messages.success(self.request, f'Category "{self.object.name}" created successfully.')
             return response
         except Exception as e:
-            messages.error(
-                self.request,
-                f'Error creating category: {str(e)}'
-            )
+            messages.error(self.request, f'Error creating category: {str(e)}')
             return self.form_invalid(form)
     
     def get_context_data(self, **kwargs):
-        """Add context for template"""
         context = super().get_context_data(**kwargs)
         context['form_title'] = 'Add New Category'
         context['submit_text'] = 'Create Category'
@@ -658,32 +637,26 @@ class CategoryUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'inventory/category_form.html'
     success_url = reverse_lazy('category_list')
     fields = ['name', 'description']
-    
+
+    def get_queryset(self):
+        return Category.objects.filter(user=self.request.user)
+
     def get_form(self, form_class=None):
-        """Customize form widgets"""
         form = super().get_form(form_class)
         form.fields['name'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Enter category name'})
         form.fields['description'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Enter description (optional)', 'rows': 3})
         return form
     
     def form_valid(self, form):
-        """Handle successful form submission"""
         try:
             response = super().form_valid(form)
-            messages.success(
-                self.request,
-                f'Category "{self.object.name}" updated successfully.'
-            )
+            messages.success(self.request, f'Category "{self.object.name}" updated successfully.')
             return response
         except Exception as e:
-            messages.error(
-                self.request,
-                f'Error updating category: {str(e)}'
-            )
+            messages.error(self.request, f'Error updating category: {str(e)}')
             return self.form_invalid(form)
     
     def get_context_data(self, **kwargs):
-        """Add context for template"""
         context = super().get_context_data(**kwargs)
         context['form_title'] = f'Edit Category: {self.object.name}'
         context['submit_text'] = 'Update Category'
@@ -695,22 +668,17 @@ class CategoryDeleteView(LoginRequiredMixin, DeleteView):
     model = Category
     template_name = 'inventory/category_confirm_delete.html'
     success_url = reverse_lazy('category_list')
-    
+
+    def get_queryset(self):
+        return Category.objects.filter(user=self.request.user)
+
     def delete(self, request, *args, **kwargs):
-        """Handle category deletion"""
         category = self.get_object()
         category_name = category.name
-        
         try:
             response = super().delete(request, *args, **kwargs)
-            messages.success(
-                request,
-                f'Category "{category_name}" deleted successfully.'
-            )
+            messages.success(request, f'Category "{category_name}" deleted successfully.')
             return response
         except Exception as e:
-            messages.error(
-                request,
-                f'Error deleting category: {str(e)}. It may have associated products.'
-            )
+            messages.error(request, f'Error deleting category: {str(e)}. It may have associated products.')
             return redirect('category_list')
