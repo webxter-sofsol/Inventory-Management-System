@@ -302,7 +302,7 @@
       <i class="bi bi-123 me-1"></i> Update Quantities
     </button>
     <button type="submit" name="operation" value="price" class="btn-bulk">
-      <i class="bi bi-currency-dollar me-1"></i> Update Prices
+      <i class="bi bi-currency-rupee me-1"></i> Update Prices
     </button>
     <button type="button" class="btn-bulk" style="margin-left:auto;color:#6b7280;border-color:#e5e7eb;" id="clear-selection">
       <i class="bi bi-x me-1"></i> Clear
@@ -354,8 +354,8 @@
                   {% endif %}
                 </div>
               </td>
-              <td style="font-weight:500;">${{ product.price }}</td>
-              <td style="color:#6b7280;">${{ product.total_value }}</td>
+              <td style="font-weight:500;">₹{{ product.price }}</td>
+              <td style="color:#6b7280;">₹{{ product.total_value }}</td>
               <td>
                 {% if product.stock_status == 'in-stock' %}
                   <span class="badge-in"><i class="bi bi-check-circle me-1"></i>In Stock</span>

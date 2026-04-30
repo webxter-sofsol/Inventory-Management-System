@@ -190,9 +190,9 @@
     </div>
   </div>
   <div class="summary-card">
-    <div class="summary-icon" style="background:#fefce8;color:#ca8a04;"><i class="bi bi-currency-dollar"></i></div>
+    <div class="summary-icon" style="background:#fefce8;color:#ca8a04;"><i class="bi bi-currency-rupee"></i></div>
     <div>
-      <div class="summary-val">${{ summary.total_value|default:0|floatformat:0 }}</div>
+      <div class="summary-val">₹{{ summary.total_value|default:0|floatformat:0 }}</div>
       <div class="summary-lbl">Total Value</div>
     </div>
   </div>
@@ -247,8 +247,8 @@
           <td><span class="product-name">{{ p.name }}</span></td>
           <td style="color:#6b7280;font-size:12.5px;">{{ p.category.name }}</td>
           <td style="text-align:right;font-weight:600;">{{ p.quantity }}</td>
-          <td style="text-align:right;">${{ p.price }}</td>
-          <td style="text-align:right;font-weight:600;">${{ p.total_value|floatformat:2 }}</td>
+          <td style="text-align:right;">₹{{ p.price }}</td>
+          <td style="text-align:right;font-weight:600;">₹{{ p.total_value|floatformat:2 }}</td>
           <td style="text-align:center;">
             <span style="font-size:13px;color:#374151;">{{ p.alert_threshold }}</span>
             {% if p.quantity < p.alert_threshold %}
@@ -278,7 +278,7 @@
           <td colspan="2">Totals</td>
           <td style="text-align:right;">{{ summary.total_units|default:0 }}</td>
           <td></td>
-          <td style="text-align:right;">${{ summary.total_value|default:0|floatformat:2 }}</td>
+          <td style="text-align:right;">₹{{ summary.total_value|default:0|floatformat:2 }}</td>
           <td colspan="2"></td>
         </tr>
       </tfoot>

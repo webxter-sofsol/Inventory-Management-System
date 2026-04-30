@@ -296,13 +296,13 @@
                 Unit Price <span class="req">*</span>
               </label>
               <div class="input-wrap has-prefix">
-                <span class="input-prefix">$</span>
+                <span class="input-prefix">₹</span>
                 {{ form.price }}
               </div>
               {% if form.price.errors %}
               <div class="field-error"><i class="bi bi-exclamation-circle"></i> {{ form.price.errors.0 }}</div>
               {% endif %}
-              <div class="field-hint">Must be greater than $0.00.</div>
+              <div class="field-hint">Must be greater than ₹0.00.</div>
             </div>
           </div>
 
@@ -430,8 +430,8 @@
 
     document.getElementById('prev-name').textContent      = name;
     document.getElementById('prev-qty').textContent       = qty > 0 ? qty + ' units' : '—';
-    document.getElementById('prev-price').textContent     = price > 0 ? '$' + price.toFixed(2) : '—';
-    document.getElementById('prev-total').textContent     = (qty > 0 && price > 0) ? '$' + total : '—';
+    document.getElementById('prev-price').textContent     = price > 0 ? '₹' + price.toFixed(2) : '—';
+    document.getElementById('prev-total').textContent     = (qty > 0 && price > 0) ? '₹' + total : '—';
     document.getElementById('prev-threshold').textContent = thr > 0 ? thr + ' units' : '—';
 
     // Style muted vs real

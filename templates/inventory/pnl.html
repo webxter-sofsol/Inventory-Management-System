@@ -78,22 +78,22 @@
   <div class="sum-card">
     <div class="sum-icon" style="background:#eff6ff;color:#1d4ed8;"><i class="bi bi-arrow-up-circle"></i></div>
     <div>
-      <div class="sum-val">${{ pnl.totals.total_revenue|floatformat:0 }}</div>
+      <div class="sum-val">₹{{ pnl.totals.total_revenue|floatformat:0 }}</div>
       <div class="sum-lbl">Total Revenue (6mo)</div>
     </div>
   </div>
   <div class="sum-card">
     <div class="sum-icon" style="background:#fef2f2;color:#dc2626;"><i class="bi bi-arrow-down-circle"></i></div>
     <div>
-      <div class="sum-val">${{ pnl.totals.total_cost|floatformat:0 }}</div>
+      <div class="sum-val">₹{{ pnl.totals.total_cost|floatformat:0 }}</div>
       <div class="sum-lbl">Total Cost (6mo)</div>
     </div>
   </div>
   <div class="sum-card">
-    <div class="sum-icon" style="background:{% if pnl.totals.total_profit >= 0 %}#f0fdf4;color:#16a34a{% else %}#fef2f2;color:#dc2626{% endif %};"><i class="bi bi-currency-dollar"></i></div>
+    <div class="sum-icon" style="background:{% if pnl.totals.total_profit >= 0 %}#f0fdf4;color:#16a34a{% else %}#fef2f2;color:#dc2626{% endif %};"><i class="bi bi-currency-rupee"></i></div>
     <div>
       <div class="sum-val" style="color:{% if pnl.totals.total_profit >= 0 %}#16a34a{% else %}#dc2626{% endif %};">
-        {% if pnl.totals.total_profit >= 0 %}+{% endif %}${{ pnl.totals.total_profit|floatformat:0 }}
+        {% if pnl.totals.total_profit >= 0 %}+{% endif %}₹{{ pnl.totals.total_profit|floatformat:0 }}
       </div>
       <div class="sum-lbl">Gross Profit (6mo)</div>
     </div>
@@ -144,10 +144,10 @@
           {% for m in pnl.monthly %}
           <tr>
             <td>{{ m.label }}</td>
-            <td>${{ m.revenue|floatformat:0 }}</td>
-            <td>${{ m.cost|floatformat:0 }}</td>
+            <td>₹{{ m.revenue|floatformat:0 }}</td>
+            <td>₹{{ m.cost|floatformat:0 }}</td>
             <td class="{% if m.profit >= 0 %}profit-pos{% else %}profit-neg{% endif %}">
-              {% if m.profit >= 0 %}+{% endif %}${{ m.profit|floatformat:0 }}
+              {% if m.profit >= 0 %}+{% endif %}₹{{ m.profit|floatformat:0 }}
             </td>
             <td style="color:#9ca3af;">{{ m.transactions }}</td>
           </tr>
@@ -171,7 +171,7 @@
           <div class="product-bar-wrap">
             <div class="product-name-row">
               <span>{{ p.name }}</span>
-              <span>${{ p.revenue|floatformat:0 }}</span>
+              <span>₹{{ p.revenue|floatformat:0 }}</span>
             </div>
             <div class="product-bar-bg">
               {% if max_rev and max_rev > 0 %}
