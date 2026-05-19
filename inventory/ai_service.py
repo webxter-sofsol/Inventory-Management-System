@@ -45,22 +45,43 @@ def _build_inventory_snapshot(user=None) -> dict:
         p['price'] = float(p['price'])
         p['created_at'] = p['created_at'].isoformat() if p['created_at'] else None
 
-    # Transaction summary (last 90 days)
-    since = timezone.now() - timezone.timedelta(days=90)
-    tx_summary = (
+    now = timezone.now()
+    since_90 = now - timezone.timedelta(days=90)
+    since_7  = now - timezone.timedelta(days=7)
+
+    # --- Recent transactions (last 7 days) listed individually ---
+    recent_tx = list(
+        tx_qs.filter(timestamp__gte=since_7)
+        .select_related('product')
+        .order_by('-timestamp')
+        .values('product__name', 'transaction_type', 'quantity_change', 'timestamp')
+    )
+    for t in recent_tx:
+        t['timestamp'] = t['timestamp'].isoformat()
+        t['quantity_change'] = int(t['quantity_change'])
+
+    # --- 90-day aggregated summary ---
+    tx_summary = list(
         tx_qs
-        .filter(timestamp__gte=since)
+        .filter(timestamp__gte=since_90)
         .values('product__name', 'transaction_type')
         .annotate(total_qty=Sum('quantity_change'), count=Count('id'))
         .order_by('product__name')
     )
 
-    # Revenue & cost estimates
-    sales = tx_qs.filter(transaction_type='sale', timestamp__gte=since).select_related('product')
-    total_revenue = sum(abs(tx.quantity_change) * tx.product.price for tx in sales)
+    # Revenue & cost estimates (90 days)
+    sales_90 = tx_qs.filter(transaction_type='sale', timestamp__gte=since_90).select_related('product')
+    total_revenue = sum(abs(tx.quantity_change) * tx.product.price for tx in sales_90)
 
-    purchases = tx_qs.filter(transaction_type='purchase', timestamp__gte=since).select_related('product')
-    total_cost = sum(tx.quantity_change * tx.product.price for tx in purchases)
+    purchases_90 = tx_qs.filter(transaction_type='purchase', timestamp__gte=since_90).select_related('product')
+    total_cost = sum(tx.quantity_change * tx.product.price for tx in purchases_90)
+
+    # Revenue & cost (last 7 days)
+    sales_7 = tx_qs.filter(transaction_type='sale', timestamp__gte=since_7).select_related('product')
+    revenue_7d = sum(abs(tx.quantity_change) * tx.product.price for tx in sales_7)
+
+    purchases_7 = tx_qs.filter(transaction_type='purchase', timestamp__gte=since_7).select_related('product')
+    cost_7d = sum(tx.quantity_change * tx.product.price for tx in purchases_7)
 
     low_stock = list(
         alert_qs
@@ -79,13 +100,21 @@ def _build_inventory_snapshot(user=None) -> dict:
         c['total_value'] = float(c['total_value'] or 0)
 
     return {
-        'snapshot_date': timezone.now().isoformat(),
+        'snapshot_date': now.isoformat(),
         'products': products,
-        'transaction_summary_90d': list(tx_summary),
+        # Recent individual transactions — AI MUST comment on these
+        'recent_transactions_7d': recent_tx,
+        # Aggregated 90-day summary
+        'transaction_summary_90d': tx_summary,
         'financials_90d': {
             'total_revenue': float(total_revenue),
             'total_cost': float(total_cost),
             'gross_profit': float(total_revenue - total_cost),
+        },
+        'financials_7d': {
+            'revenue': float(revenue_7d),
+            'cost': float(cost_7d),
+            'profit': float(revenue_7d - cost_7d),
         },
         'low_stock_alerts': low_stock,
         'categories': categories,
@@ -94,6 +123,7 @@ def _build_inventory_snapshot(user=None) -> dict:
             'total_inventory_value': sum(p['total_value'] for p in products),
             'out_of_stock': sum(1 for p in products if p['quantity'] == 0),
             'low_stock': len(low_stock),
+            'recent_transactions_count': len(recent_tx),
         },
     }
 
@@ -149,16 +179,32 @@ Always respond with valid JSON matching this exact schema:
 }
 Keep each recommendation detail under 120 characters. Be specific and data-driven."""
 
-    user_prompt = f"""Analyse this inventory snapshot and provide insights:
+    user_prompt = f"""Analyse this inventory snapshot and provide insights.
 
-{json.dumps(snapshot, indent=2, default=str)}
+SNAPSHOT DATE: {snapshot['snapshot_date']}
 
-Focus on:
-1. Profitability trends from the 90-day transaction data
-2. Stock health (low stock, dead stock, overstocked items)
-3. Revenue optimisation opportunities
-4. Risk factors that could cause losses
-5. Specific reorder recommendations with quantities"""
+RECENT ACTIVITY (last 7 days) — {len(snapshot['recent_transactions_7d'])} transactions:
+{json.dumps(snapshot['recent_transactions_7d'], indent=2, default=str)}
+
+7-DAY FINANCIALS: revenue=₹{snapshot['financials_7d']['revenue']:,.0f}, cost=₹{snapshot['financials_7d']['cost']:,.0f}, profit=₹{snapshot['financials_7d']['profit']:,.0f}
+
+90-DAY FINANCIALS: revenue=₹{snapshot['financials_90d']['total_revenue']:,.0f}, cost=₹{snapshot['financials_90d']['total_cost']:,.0f}, gross_profit=₹{snapshot['financials_90d']['gross_profit']:,.0f}
+
+CURRENT INVENTORY ({snapshot['totals']['total_products']} products, value=₹{snapshot['totals']['total_inventory_value']:,.0f}):
+{json.dumps(snapshot['products'], indent=2, default=str)}
+
+LOW STOCK ALERTS ({snapshot['totals']['low_stock']} active):
+{json.dumps(snapshot['low_stock_alerts'], indent=2, default=str)}
+
+90-DAY TRANSACTION SUMMARY:
+{json.dumps(snapshot['transaction_summary_90d'], indent=2, default=str)}
+
+Your analysis MUST:
+1. Specifically mention the {len(snapshot['recent_transactions_7d'])} recent transactions from the last 7 days by product name
+2. Comment on how those recent transactions changed stock levels
+3. Identify which products need restocking based on CURRENT quantities vs alert thresholds
+4. Give revenue/profit trends comparing 7-day vs 90-day performance
+5. Provide specific reorder recommendations with exact quantities"""
 
     try:
         client = _get_client()
@@ -168,7 +214,7 @@ Focus on:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.3,
+            temperature=0.7,
             max_tokens=1500,
             response_format={"type": "json_object"},
         )

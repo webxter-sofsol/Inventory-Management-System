@@ -18,9 +18,15 @@ def ai_insights_data(request):
     from .ai_service import get_ai_insights
     try:
         insights = get_ai_insights(user=request.user)
-        return JsonResponse({'ok': True, 'insights': insights})
+        response = JsonResponse({'ok': True, 'insights': insights})
     except Exception as e:
-        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+        response = JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+    # Prevent browser and proxy caching — insights must always reflect live data
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 
 @login_required
@@ -39,7 +45,10 @@ def ai_chat(request):
         return JsonResponse({'answer': 'Please ask a question.'})
     from .ai_service import ask_ai_question
     answer = ask_ai_question(question, user=request.user)
-    return JsonResponse({'answer': answer})
+    response = JsonResponse({'answer': answer})
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    return response
 
 
 @login_required

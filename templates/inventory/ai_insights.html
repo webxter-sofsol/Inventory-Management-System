@@ -286,7 +286,7 @@
     btn.classList.add('spinning');
 
     try {
-      const res = await fetch(DATA_URL + (force ? '?refresh=1' : ''));
+      const res = await fetch(DATA_URL, { cache: 'no-store' });
       const data = await res.json();
 
       if (!data.ok) throw new Error(data.error || 'Unknown error');
@@ -412,7 +412,7 @@
     messages.scrollTop = messages.scrollHeight;
 
     try {
-      const res  = await fetch(`${CHAT_URL}?q=${encodeURIComponent(q)}`);
+      const res  = await fetch(`${CHAT_URL}?q=${encodeURIComponent(q)}`, { cache: 'no-store' });
       const data = await res.json();
       document.getElementById('thinking')?.remove();
       messages.innerHTML += `<div class="chat-msg ai">${esc(data.answer)}</div>`;
