@@ -34,7 +34,12 @@ def pnl_dashboard(request):
     """Profit & Loss dashboard — pure Python, no AI call, loads fast."""
     from .ai_service import get_pnl_analysis
     pnl = get_pnl_analysis(user=request.user)
-    return render(request, 'inventory/pnl.html', {'pnl': pnl})
+    response = render(request, 'inventory/pnl.html', {'pnl': pnl})
+    # Prevent browser caching so data always reflects the latest transactions
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 
 @login_required

@@ -458,8 +458,8 @@ def export_csv(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     writer = csv.writer(response)
-    writer.writerow(['Product Name', 'Category', 'Quantity', 'Unit Price ($)',
-                     'Total Value ($)', 'Alert Threshold', 'Status'])
+    writer.writerow(['Product Name', 'Category', 'Quantity', 'Unit Price (₹)',
+                     'Total Value (₹)', 'Alert Threshold', 'Status'])
 
     for p in products:
         total_val = p.quantity * p.price
@@ -485,9 +485,30 @@ def export_pdf(request):
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
     from django.db.models import F
     from django.utils import timezone
-    import io
+    import io, os
+
+    # Register Arial (supports ₹ U+20B9). Fall back to Helvetica if not found.
+    _ARIAL_PATH = 'C:/Windows/Fonts/arial.ttf'
+    _ARIAL_BOLD_PATH = 'C:/Windows/Fonts/arialbd.ttf'
+    _USE_ARIAL = os.path.exists(_ARIAL_PATH)
+
+    if _USE_ARIAL:
+        if 'Arial' not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont('Arial', _ARIAL_PATH))
+        if 'Arial-Bold' not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont('Arial-Bold', _ARIAL_BOLD_PATH))
+        FONT_NORMAL = 'Arial'
+        FONT_BOLD   = 'Arial-Bold'
+    else:
+        FONT_NORMAL = 'Helvetica'
+        FONT_BOLD   = 'Helvetica-Bold'
+
+    # Use plain "Rs." if Arial isn't available (safe ASCII fallback)
+    CURRENCY = '₹' if _USE_ARIAL else 'Rs.'
 
     category_filter = request.GET.get('category', '').strip()
 
@@ -505,20 +526,17 @@ def export_pdf(request):
         bottomMargin=1.5 * cm,
     )
 
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('title', fontSize=16, fontName='Helvetica-Bold',
+    title_style = ParagraphStyle('title', fontSize=16, fontName=FONT_BOLD,
                                  spaceAfter=4, textColor=colors.HexColor('#111827'))
-    sub_style = ParagraphStyle('sub', fontSize=9, fontName='Helvetica',
+    sub_style = ParagraphStyle('sub', fontSize=9, fontName=FONT_NORMAL,
                                textColor=colors.HexColor('#6b7280'), spaceAfter=16)
-    header_style = ParagraphStyle('header', fontSize=8, fontName='Helvetica-Bold',
-                                  textColor=colors.white, alignment=TA_CENTER)
 
     elements = []
 
     # Title
     title_text = 'Inventory Report'
     if category_filter:
-        title_text += f' — {category_filter}'
+        title_text += f' \u2014 {category_filter}'
     elements.append(Paragraph(title_text, title_style))
     elements.append(Paragraph(
         f'Generated on {timezone.now().strftime("%B %d, %Y at %H:%M")}',
@@ -526,14 +544,12 @@ def export_pdf(request):
     ))
 
     # Table data
-    col_headers = ['Product Name', 'Category', 'Qty', 'Unit Price', 'Total Value', 'Threshold', 'Status']
+    col_headers = [
+        'Product Name', 'Category', 'Qty',
+        f'Unit Price ({CURRENCY})', f'Total Value ({CURRENCY})',
+        'Threshold', 'Status',
+    ]
     data = [col_headers]
-
-    status_colors = {
-        'in-stock': colors.HexColor('#15803d'),
-        'low-stock': colors.HexColor('#b45309'),
-        'out-of-stock': colors.HexColor('#dc2626'),
-    }
 
     for p in products:
         total_val = p.quantity * p.price
@@ -541,8 +557,8 @@ def export_pdf(request):
             p.name,
             p.category.name,
             str(p.quantity),
-            f'${p.price:.2f}',
-            f'${total_val:.2f}',
+            f'{CURRENCY}{p.price:.2f}',
+            f'{CURRENCY}{total_val:.2f}',
             str(p.alert_threshold),
             p.stock_status.replace('-', ' ').title(),
         ])
@@ -554,13 +570,13 @@ def export_pdf(request):
         # Header row
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1d4ed8')),
         ('TEXTCOLOR',  (0, 0), (-1, 0), colors.white),
-        ('FONTNAME',   (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME',   (0, 0), (-1, 0), FONT_BOLD),
         ('FONTSIZE',   (0, 0), (-1, 0), 8),
         ('ALIGN',      (0, 0), (-1, 0), 'CENTER'),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
         ('TOPPADDING',    (0, 0), (-1, 0), 8),
         # Body rows
-        ('FONTNAME',   (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTNAME',   (0, 1), (-1, -1), FONT_NORMAL),
         ('FONTSIZE',   (0, 1), (-1, -1), 8),
         ('TOPPADDING',    (0, 1), (-1, -1), 6),
         ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
